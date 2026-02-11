@@ -26,6 +26,12 @@ CREATE TABLE users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     
+    extend_field1 VARCHAR(255) DEFAULT NULL COMMENT '预留字段1',
+    extend_field2 VARCHAR(255) DEFAULT NULL COMMENT '预留字段2',
+    extend_field3 VARCHAR(255) DEFAULT NULL COMMENT '预留字段3',
+    extend_field4 VARCHAR(255) DEFAULT NULL COMMENT '预留字段4',
+    extend_field5 VARCHAR(255) DEFAULT NULL COMMENT '预留字段5',
+
     INDEX idx_username (username),
     INDEX idx_email (email),
     INDEX idx_status (status)
@@ -44,6 +50,12 @@ CREATE TABLE conversations (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     
+    extend_field1 VARCHAR(255) DEFAULT NULL COMMENT '预留字段1',
+    extend_field2 VARCHAR(255) DEFAULT NULL COMMENT '预留字段2',
+    extend_field3 VARCHAR(255) DEFAULT NULL COMMENT '预留字段3',
+    extend_field4 VARCHAR(255) DEFAULT NULL COMMENT '预留字段4',
+    extend_field5 VARCHAR(255) DEFAULT NULL COMMENT '预留字段5',
+
     INDEX idx_user_id (user_id),
     INDEX idx_status (status),
     INDEX idx_updated_at (updated_at),
@@ -62,6 +74,12 @@ CREATE TABLE messages (
     metadata JSON COMMENT '元数据 {model: "gpt-4", temperature: 0.7}',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     
+    extend_field1 VARCHAR(255) DEFAULT NULL COMMENT '预留字段1',
+    extend_field2 VARCHAR(255) DEFAULT NULL COMMENT '预留字段2',
+    extend_field3 VARCHAR(255) DEFAULT NULL COMMENT '预留字段3',
+    extend_field4 VARCHAR(255) DEFAULT NULL COMMENT '预留字段4',
+    extend_field5 VARCHAR(255) DEFAULT NULL COMMENT '预留字段5',
+
     INDEX idx_conversation_id (conversation_id),
     INDEX idx_created_at (created_at),
     FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
@@ -95,6 +113,12 @@ CREATE TABLE lesson_plans (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     
+    extend_field1 VARCHAR(255) DEFAULT NULL COMMENT '预留字段1',
+    extend_field2 VARCHAR(255) DEFAULT NULL COMMENT '预留字段2',
+    extend_field3 VARCHAR(255) DEFAULT NULL COMMENT '预留字段3',
+    extend_field4 VARCHAR(255) DEFAULT NULL COMMENT '预留字段4',
+    extend_field5 VARCHAR(255) DEFAULT NULL COMMENT '预留字段5',
+
     INDEX idx_user_id (user_id),
     INDEX idx_subject_grade (subject, grade),
     INDEX idx_status (status),
@@ -122,6 +146,12 @@ CREATE TABLE grading_tasks (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     completed_at TIMESTAMP NULL COMMENT '完成时间',
     
+    extend_field1 VARCHAR(255) DEFAULT NULL COMMENT '预留字段1',
+    extend_field2 VARCHAR(255) DEFAULT NULL COMMENT '预留字段2',
+    extend_field3 VARCHAR(255) DEFAULT NULL COMMENT '预留字段3',
+    extend_field4 VARCHAR(255) DEFAULT NULL COMMENT '预留字段4',
+    extend_field5 VARCHAR(255) DEFAULT NULL COMMENT '预留字段5',
+
     INDEX idx_user_id (user_id),
     INDEX idx_status (status),
     INDEX idx_type (type),
@@ -154,6 +184,12 @@ CREATE TABLE submissions (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     
+    extend_field1 VARCHAR(255) DEFAULT NULL COMMENT '预留字段1',
+    extend_field2 VARCHAR(255) DEFAULT NULL COMMENT '预留字段2',
+    extend_field3 VARCHAR(255) DEFAULT NULL COMMENT '预留字段3',
+    extend_field4 VARCHAR(255) DEFAULT NULL COMMENT '预留字段4',
+    extend_field5 VARCHAR(255) DEFAULT NULL COMMENT '预留字段5',
+
     INDEX idx_task_id (task_id),
     INDEX idx_student_id (student_id),
     INDEX idx_status (status),
@@ -175,6 +211,12 @@ CREATE TABLE files (
     type ENUM('image', 'document', 'video', 'audio') COMMENT '文件类型',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     
+    extend_field1 VARCHAR(255) DEFAULT NULL COMMENT '预留字段1',
+    extend_field2 VARCHAR(255) DEFAULT NULL COMMENT '预留字段2',
+    extend_field3 VARCHAR(255) DEFAULT NULL COMMENT '预留字段3',
+    extend_field4 VARCHAR(255) DEFAULT NULL COMMENT '预留字段4',
+    extend_field5 VARCHAR(255) DEFAULT NULL COMMENT '预留字段5',
+
     INDEX idx_user_id (user_id),
     INDEX idx_type (type),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -190,18 +232,29 @@ CREATE TABLE system_configs (
     description VARCHAR(500) COMMENT '描述',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     
+    extend_field1 VARCHAR(255) DEFAULT NULL COMMENT '预留字段1',
+    extend_field2 VARCHAR(255) DEFAULT NULL COMMENT '预留字段2',
+    extend_field3 VARCHAR(255) DEFAULT NULL COMMENT '预留字段3',
+    extend_field4 VARCHAR(255) DEFAULT NULL COMMENT '预留字段4',
+    extend_field5 VARCHAR(255) DEFAULT NULL COMMENT '预留字段5',
+
     INDEX idx_config_key (config_key)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统配置表';
 
 -- ============================================
 -- 插入默认管理员账号 (密码: admin123)
 -- ============================================
+-- 密码: admin123 (BCrypt)
 INSERT INTO users (username, password, nickname, role, subjects, status) VALUES 
-('admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iK6R.zBrNDVEFQ4rJFqF/R5g4t8u', '管理员', 'admin', '["全部"]', 1);
+('admin', '$2a$10$7JB720yubVS0vunZvHjN5e9FQ67gYzqH4LZGJxqjfzD9Fu5xPjd/.', '管理员', 'admin', '["全部"]', 1);
 
 -- 插入默认教师账号 (密码: teacher123)
 INSERT INTO users (username, password, nickname, role, subjects, status) VALUES 
-('teacher001', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iK6R.zBrNDVEFQ4rJFqF/R5g4t8u', '王老师', 'teacher', '["数学", "物理"]', 1);
+('teacher001', '$2a$10$XQm6DFrT1OUbO7OuJaVRleQmtL6PjFvXbMdG.XD9VoTK3eI5MJRIe', '王老师', 'teacher', '["数学", "物理"]', 1);
+
+-- 插入测试账号 (密码: test123)
+INSERT INTO users (username, password, nickname, role, subjects, status) VALUES 
+('test', '$2a$10$yQnS.zPcCfHYLwD3yd8wJOwdeFLYJQLWXdF8oK.qYY4EjvWpPdlx2', '测试用户', 'teacher', '["语文"]', 1);
 
 -- ============================================
 -- 插入系统配置
