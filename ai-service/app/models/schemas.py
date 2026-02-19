@@ -2,7 +2,6 @@
 Pydantic 数据模型
 """
 from datetime import datetime
-from enum import Enum
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
@@ -21,111 +20,6 @@ class PaginationParams(BaseModel):
     """分页参数"""
     page: int = Field(default=1, ge=1, description="页码")
     size: int = Field(default=20, ge=1, le=100, description="每页大小")
-
-
-# ==================== 聊天模型 ====================
-
-class ChatMessage(BaseModel):
-    """聊天消息"""
-    role: str = Field(..., description="角色: system/user/assistant")
-    content: str = Field(..., description="消息内容")
-
-
-class ChatCompletionRequest(BaseModel):
-    """聊天完成请求"""
-    messages: List[ChatMessage] = Field(..., description="消息列表")
-    model: str = Field(default="gpt-4", description="模型名称")
-    temperature: float = Field(default=0.7, ge=0, le=2)
-    max_tokens: int = Field(default=2000, ge=1)
-    stream: bool = Field(default=False, description="是否流式返回")
-
-
-class ChatCompletionResponse(ResponseBase):
-    """聊天完成响应"""
-    content: str = Field(..., description="回复内容")
-    usage: Optional[Dict[str, int]] = Field(default=None, description="Token 使用量")
-
-
-class EducationChatRequest(BaseModel):
-    """教育领域聊天请求（带 RAG）"""
-    query: str = Field(..., description="用户问题")
-    context: Optional[Dict[str, str]] = Field(default=None, description="上下文信息")
-    use_knowledge_base: bool = Field(default=True, description="是否使用知识库")
-    knowledge_base_ids: Optional[List[str]] = Field(default=None, description="指定知识库ID")
-
-
-class EducationChatResponse(ResponseBase):
-    """教育领域聊天响应"""
-    answer: str = Field(..., description="回答")
-    sources: Optional[List[Dict[str, Any]]] = Field(default=None, description="参考来源")
-    suggested_questions: Optional[List[str]] = Field(default=None, description="建议追问")
-
-
-# ==================== 批阅模型 ====================
-
-class GradingType(str, Enum):
-    """批阅类型"""
-    ESSAY = "essay"
-    CODE = "code"
-    MATH = "math"
-    ENGLISH = "english"
-    OTHER = "other"
-
-
-class RubricItem(BaseModel):
-    """评分标准项"""
-    criteria: str = Field(..., description="评分项")
-    weight: int = Field(..., ge=0, le=100, description="权重(%)")
-    description: str = Field(..., description="描述")
-
-
-class EssayGradingRequest(BaseModel):
-    """作文批阅请求"""
-    content: str = Field(..., description="作文内容")
-    title: Optional[str] = Field(default=None, description="作文题目")
-    rubric: List[RubricItem] = Field(..., description="评分标准")
-    grade: Optional[str] = Field(default=None, description="年级")
-    word_count: Optional[int] = Field(default=None, description="字数要求")
-    check_plagiarism: bool = Field(default=False, description="是否查重")
-
-
-class CriteriaScore(BaseModel):
-    """分项得分"""
-    criteria_id: str = Field(..., description="评分项ID")
-    score: int = Field(..., description="得分")
-    comment: str = Field(..., description="评语")
-
-
-class EssayGradingResponse(ResponseBase):
-    """作文批阅响应"""
-    overall_score: int = Field(..., description="总评分")
-    overall_comment: str = Field(..., description="总评评语")
-    strengths: List[str] = Field(..., description="优点")
-    weaknesses: List[str] = Field(..., description="不足")
-    suggestions: List[str] = Field(..., description="建议")
-    criteria_scores: List[CriteriaScore] = Field(..., description="分项评分")
-    detailed_comments: str = Field(..., description="详细点评")
-    spelling_errors: Optional[List[Dict[str, Any]]] = Field(default=None, description="错别字")
-    word_count: Optional[int] = Field(default=None, description="实际字数")
-    plagiarism_check: Optional[Dict[str, Any]] = Field(default=None, description="查重结果")
-
-
-class CodeGradingRequest(BaseModel):
-    """代码批阅请求"""
-    code: str = Field(..., description="代码内容")
-    language: str = Field(..., description="编程语言")
-    problem: str = Field(..., description="题目描述")
-    test_cases: Optional[List[Dict[str, str]]] = Field(default=None, description="测试用例")
-
-
-class CodeGradingResponse(ResponseBase):
-    """代码批阅响应"""
-    score: int = Field(..., description="得分")
-    compilation_result: Optional[Dict[str, Any]] = Field(default=None, description="编译结果")
-    test_results: Optional[List[Dict[str, Any]]] = Field(default=None, description="测试结果")
-    code_quality: Dict[str, int] = Field(..., description="代码质量评分")
-    suggestions: List[str] = Field(..., description="改进建议")
-    improved_code: Optional[str] = Field(default=None, description="优化后的代码")
 
 
 # ==================== 知识库模型 ====================
