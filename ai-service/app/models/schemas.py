@@ -104,6 +104,19 @@ class LessonPlanResponse(ResponseBase):
     resources: Optional[List[Dict[str, str]]] = Field(default=None, description="推荐资源")
 
 
+class LessonPlanEnhanceRequest(BaseModel):
+    """教案优化请求"""
+    original_plan: Dict[str, Any] = Field(..., description="原始教案对象")
+    enhancement_type: str = Field(default="improve", description="优化类型")
+    target: Optional[str] = Field(default=None, description="优化目标描述")
+
+
+class LessonPlanEnhanceResponse(ResponseBase):
+    """教案优化响应"""
+    enhanced_plan: Dict[str, Any] = Field(..., description="优化后的教案")
+    changes: List[str] = Field(default_factory=list, description="改动说明")
+
+
 # ==================== 批阅模型 ====================
 
 class GradingType(str, Enum):

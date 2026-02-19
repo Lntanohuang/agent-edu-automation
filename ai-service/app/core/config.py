@@ -5,11 +5,18 @@ from functools import lru_cache
 from typing import List, Optional
 
 from pydantic import Field
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     """应用配置类"""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+    )
     
     # 应用信息
     app_name: str = Field(default="智能教育平台 AI 服务", description="应用名称")
@@ -58,12 +65,6 @@ class Settings(BaseSettings):
     # 限流配置
     rate_limit_per_minute: int = Field(default=60, description="每分钟请求限制")
     
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
-
-
 @lru_cache()
 def get_settings() -> Settings:
     """获取配置实例（单例模式）"""

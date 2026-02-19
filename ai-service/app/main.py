@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 
 from app.core.config import settings
 from app.core.logging import get_logger, setup_logging
-from app.routers import chat, grading, lesson_plan, legal, rag
+from app.routers import chat, grading, lesson_plan, legal, rag, plan_agent
 
 # 设置日志
 setup_logging()
@@ -64,6 +64,7 @@ app.include_router(lesson_plan.router, prefix="/lesson-plan", tags=["教案生�
 app.include_router(grading.router, prefix="/grading", tags=["作业批阅"])
 app.include_router(legal.router, prefix="/legal", tags=["法律法规"])
 app.include_router(rag.router, prefix="/rag", tags=["RAG"])
+app.include_router(plan_agent.router, prefix="/plan-agent", tags=["教案Agent"])
 
 
 @app.on_event("startup")

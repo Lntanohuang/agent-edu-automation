@@ -26,6 +26,8 @@ from fastapi import APIRouter
 
 from app.core.logging import get_logger
 from app.models.schemas import (
+    LessonPlanEnhanceRequest,
+    LessonPlanEnhanceResponse,
     LessonPlanGenerateRequest,
     LessonPlanResponse,
 )
@@ -57,25 +59,21 @@ async def generate_lesson_plan(request: LessonPlanGenerateRequest):
         )
     except Exception as e:
         logger.error("Lesson plan generation failed", error=str(e))
-        return LessonPlanResponse(
-            success=False,
-            message=f"生成失败: {str(e)}",
-            title="",
+        fallback = lesson_plan_service.build_default_plan(
             subject=request.subject,
             grade=request.grade,
+            topic=request.topic,
             duration=request.duration,
-            objectives=[],
-            key_points=[],
-            difficulties=[],
-            teaching_methods=[],
-            teaching_aids=[],
-            procedures=[],
-            homework="",
+        )
+        return LessonPlanResponse(
+            **fallback,
+            success=False,
+            message=f"生成失败: {str(e)}",
         )
 
 
-@router.post("/enhance")
-async def enhance_lesson_plan(request: dict):
+@router.post("/enhance", response_model=LessonPlanEnhanceResponse)
+async def enhance_lesson_plan(request: LessonPlanEnhanceRequest):
     """
     优化现有教案
     
@@ -86,15 +84,18 @@ async def enhance_lesson_plan(request: dict):
     - differentiate: 分层教学设计
     """
     try:
-        result = await lesson_plan_service.enhance(request)
-        return {
-            "success": True,
-            "enhanced_plan": result,
-            "changes": result.get("changes", []),
-        }
+        result = await lesson_plan_service.enhance(request.model_dump())
+        return LessonPlanEnhanceResponse(
+            success=True,
+            enhanced_plan=result.get("enhanced_plan", request.original_plan),
+            changes=result.get("changes", []),
+            message="教案优化成功",
+        )
     except Exception as e:
         logger.error("Lesson plan enhancement failed", error=str(e))
-        return {
-            "success": False,
-            "message": f"优化失败: {str(e)}",
-        }
+        return LessonPlanEnhanceResponse(
+            success=False,
+            enhanced_plan=request.original_plan,
+            changes=[],
+            message=f"优化失败: {str(e)}",
+        )
