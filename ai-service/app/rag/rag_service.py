@@ -1,4 +1,6 @@
 import logging
+from hashlib import sha1
+from pathlib import Path
 from typing import Any, Dict
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -15,6 +17,8 @@ def build_and_store_chunks(
     *,
     chunk_size: int = 1000,
     chunk_overlap: int = 200,
+    book_label: str | None = None,
+    source_file_name: str | None = None,
 ) -> Dict[str, Any]:
     """
     加载文档 -> 切分 -> 写入向量库
@@ -31,6 +35,12 @@ def build_and_store_chunks(
         raise ValueError("chunk_overlap 不能小于 0")
     if chunk_overlap >= chunk_size:
         raise ValueError("chunk_overlap 必须小于 chunk_size")
+
+    source_name = (source_file_name or Path(file_path).name).strip()
+    normalized_label = (book_label or Path(source_name).stem).strip()
+    if not normalized_label:
+        normalized_label = "未命名资料"
+    book_id = f"book_{sha1(normalized_label.encode('utf-8')).hexdigest()[:12]}"
 
     logger.info(
         "Start RAG chunking: file_path=%s, chunk_size=%d, chunk_overlap=%d",
@@ -53,6 +63,14 @@ def build_and_store_chunks(
         chunk_count = len(all_splits)
         logger.info("Split documents finished: chunks=%d", chunk_count)
 
+        for index, doc in enumerate(all_splits):
+            metadata = dict(doc.metadata or {})
+            metadata["book_label"] = normalized_label
+            metadata["book_id"] = book_id
+            metadata["file_name"] = source_name
+            metadata["chunk_index"] = index
+            doc.metadata = metadata
+
         vector_store.add_documents(all_splits)
         logger.info("Stored chunks into vector store: chunks=%d", chunk_count)
 
@@ -63,6 +81,8 @@ def build_and_store_chunks(
             "chunk_count": chunk_count,
             "chunk_size": chunk_size,
             "chunk_overlap": chunk_overlap,
+            "book_label": normalized_label,
+            "book_id": book_id,
             "error": None,
         }
 
@@ -75,5 +95,7 @@ def build_and_store_chunks(
             "chunk_count": 0,
             "chunk_size": chunk_size,
             "chunk_overlap": chunk_overlap,
+            "book_label": normalized_label,
+            "book_id": book_id,
             "error": str(exc),
         }

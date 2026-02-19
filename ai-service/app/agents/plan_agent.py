@@ -8,22 +8,32 @@ from app.tools.rag_tool import retrieve_context
 from pydantic import BaseModel, Field
 
 
-class LessonPlanOutput(BaseModel):
-    """Final structured output for lesson plan generation."""
-    title: str = Field(description="Lesson plan title")
+class WeeklyPlan(BaseModel):
+    week: int = Field(description="Week number starting from 1")
+    unit_topic: str = Field(description="Weekly unit topic")
+    objectives: List[str] = Field(description="Weekly objectives")
+    key_points: List[str] = Field(description="Weekly key points")
+    difficulties: List[str] = Field(description="Weekly difficulties")
+    activities: List[str] = Field(description="Weekly core activities")
+    homework: str = Field(description="Weekly homework")
+    assessment: str = Field(description="Weekly assessment method")
+
+
+class SemesterPlanOutput(BaseModel):
+    """Final structured output for semester lesson plan generation."""
+    semester_title: str = Field(description="Semester plan title")
     subject: str = Field(description="Subject")
     grade: str = Field(description="Grade level")
-    duration: int = Field(description="Number of class periods")
-    objectives: List[str] = Field(description="Teaching objectives")
-    key_points: List[str] = Field(description="Key teaching points")
-    difficulties: List[str] = Field(description="Teaching difficulties")
-    teaching_methods: List[str] = Field(description="Teaching methods")
-    teaching_aids: List[str] = Field(description="Teaching aids")
-    procedures: List[dict] = Field(description="Teaching procedures with stage/duration/content/activities/design_intent")
-    homework: str = Field(description="Homework assignment")
-    blackboard_design: str = Field(description="Blackboard design")
-    reflection_guide: str = Field(description="Post-class reflection guide")
-    resources: List[dict] = Field(description="Recommended resources with title/type/description")
+    total_weeks: int = Field(description="Total weeks in semester")
+    lessons_per_week: int = Field(description="Lessons per week")
+    textbook_version: str = Field(description="Textbook version")
+    difficulty: str = Field(description="Difficulty level")
+    semester_goals: List[str] = Field(description="Semester-level goals")
+    key_competencies: List[str] = Field(description="Core competencies to cultivate")
+    teaching_strategies: List[str] = Field(description="Semester teaching strategies")
+    weekly_plans: List[WeeklyPlan] = Field(description="Weekly teaching plans")
+    assessment_plan: List[str] = Field(description="Semester assessment plan")
+    resource_plan: List[str] = Field(description="Semester teaching resource plan")
 
 
 class TwoStagePlanAgent:
@@ -49,7 +59,7 @@ class TwoStagePlanAgent:
             context_text = str(tool_result or "")
 
         structured_llm = ollama_qwen_llm.with_structured_output(
-            LessonPlanOutput,
+            SemesterPlanOutput,
             method="json_schema",
         )
 
