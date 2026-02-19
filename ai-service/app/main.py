@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 
 from app.core.config import settings
 from app.core.logging import get_logger, setup_logging
-from app.routers import chat, grading, lesson_plan, legal, rag, plan_agent
+from app.routers import chat, grading, legal, rag, plan_agent
 
 # 设置日志
 setup_logging()
@@ -60,7 +60,6 @@ async def health_check():
 
 # 注册路由
 app.include_router(chat.router, prefix="/chat", tags=["智能问答"])
-app.include_router(lesson_plan.router, prefix="/lesson-plan", tags=["教案生成"])
 app.include_router(grading.router, prefix="/grading", tags=["作业批阅"])
 app.include_router(legal.router, prefix="/legal", tags=["法律法规"])
 app.include_router(rag.router, prefix="/rag", tags=["RAG"])

@@ -61,62 +61,6 @@ class EducationChatResponse(ResponseBase):
     suggested_questions: Optional[List[str]] = Field(default=None, description="建议追问")
 
 
-# ==================== 教案模型 ====================
-
-class LessonPlanGenerateRequest(BaseModel):
-    """教案生成请求"""
-    subject: str = Field(..., description="学科")
-    grade: str = Field(..., description="年级")
-    topic: str = Field(..., description="课题")
-    duration: int = Field(default=1, ge=1, le=4, description="课时数")
-    class_size: int = Field(default=40, ge=1, le=100, description="班级人数")
-    teaching_goals: Optional[str] = Field(default=None, description="教学目标")
-    requirements: Optional[str] = Field(default=None, description="特殊要求")
-    textbook_version: Optional[str] = Field(default=None, description="教材版本")
-    difficulty: Optional[str] = Field(default="中等", description="难度")
-    output_format: str = Field(default="detailed", description="输出格式: detailed/standard/simple")
-
-
-class TeachingProcedure(BaseModel):
-    """教学环节"""
-    stage: str = Field(..., description="环节名称")
-    duration: int = Field(..., description="时长(分钟)")
-    content: str = Field(..., description="教学内容")
-    activities: str = Field(..., description="师生活动")
-    design_intent: str = Field(..., description="设计意图")
-
-
-class LessonPlanResponse(ResponseBase):
-    """教案响应"""
-    title: str = Field(..., description="教案标题")
-    subject: str = Field(..., description="学科")
-    grade: str = Field(..., description="年级")
-    duration: int = Field(..., description="课时数")
-    objectives: List[str] = Field(..., description="教学目标")
-    key_points: List[str] = Field(..., description="教学重点")
-    difficulties: List[str] = Field(..., description="教学难点")
-    teaching_methods: List[str] = Field(..., description="教学方法")
-    teaching_aids: List[str] = Field(..., description="教学用具")
-    procedures: List[TeachingProcedure] = Field(..., description="教学过程")
-    homework: str = Field(..., description="作业布置")
-    blackboard_design: Optional[str] = Field(default=None, description="板书设计")
-    reflection_guide: Optional[str] = Field(default=None, description="教学反思指导")
-    resources: Optional[List[Dict[str, str]]] = Field(default=None, description="推荐资源")
-
-
-class LessonPlanEnhanceRequest(BaseModel):
-    """教案优化请求"""
-    original_plan: Dict[str, Any] = Field(..., description="原始教案对象")
-    enhancement_type: str = Field(default="improve", description="优化类型")
-    target: Optional[str] = Field(default=None, description="优化目标描述")
-
-
-class LessonPlanEnhanceResponse(ResponseBase):
-    """教案优化响应"""
-    enhanced_plan: Dict[str, Any] = Field(..., description="优化后的教案")
-    changes: List[str] = Field(default_factory=list, description="改动说明")
-
-
 # ==================== 批阅模型 ====================
 
 class GradingType(str, Enum):
