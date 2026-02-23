@@ -37,7 +37,7 @@
     
     <!-- 功能模块 -->
     <el-row :gutter="20" class="features-row">
-      <el-col :span="8" v-for="feature in features" :key="feature.title">
+      <el-col :span="12" v-for="feature in features" :key="feature.title">
         <el-card class="feature-card" shadow="hover" @click="$router.push(feature.route)">
           <div class="feature-content">
             <div class="feature-icon" :style="{ background: feature.bgColor }">
@@ -104,7 +104,6 @@ import { computed } from 'vue'
 import {
   ChatDotRound,
   Document,
-  EditPen,
   ArrowRight
 } from '@element-plus/icons-vue'
 
@@ -120,7 +119,7 @@ const today = computed(() => {
 const statistics = [
   { title: '问答次数', value: 128, icon: 'ChatLineRound', color: '#409EFF' },
   { title: '生成教案', value: 36, icon: 'DocumentChecked', color: '#67C23A' },
-  { title: '批阅报告', value: 256, icon: 'FolderOpened', color: '#E6A23C' },
+  { title: '活跃对话', value: 18, icon: 'FolderOpened', color: '#E6A23C' },
   { title: '节省时间', value: '48h', icon: 'TrendCharts', color: '#F56C6C' }
 ]
 
@@ -138,25 +137,18 @@ const features = [
     icon: Document,
     bgColor: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
     route: '/lesson-plan'
-  },
-  {
-    title: '智能报告批阅',
-    description: 'AI 辅助批量批阅学生作业，提供详细反馈和建议',
-    icon: EditPen,
-    bgColor: 'linear-gradient(135deg, #fc4a1a 0%, #f7b733 100%)',
-    route: '/grading'
   }
 ]
 
 const recentActivities = [
   { content: '生成了《初中数学-一元二次方程》教案', time: '10分钟前', type: 'success' as const },
-  { content: '批阅完成高一二班语文作文', time: '30分钟前', type: 'primary' as const },
+  { content: '和 AI 助手完成了一次课程答疑', time: '30分钟前', type: 'primary' as const },
   { content: '与AI助手讨论了课程设计问题', time: '1小时前', type: 'info' as const },
   { content: '导出了一份PDF格式的教案', time: '2小时前', type: 'warning' as const }
 ]
 
 const notices = [
-  { title: '系统升级完成，新增批量批阅功能', tag: '更新', type: 'success' as const, time: '2024-01-15' },
+  { title: '系统升级完成，教案生成已接入实时接口', tag: '更新', type: 'success' as const, time: '2024-01-15' },
   { title: '春节假期系统维护通知', tag: '公告', type: 'warning' as const, time: '2024-01-10' },
   { title: '教案模板库新增50+精品模板', tag: '资源', type: 'info' as const, time: '2024-01-08' },
   { title: 'AI 模型升级，回答质量提升', tag: '更新', type: 'success' as const, time: '2024-01-05' }

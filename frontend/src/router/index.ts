@@ -5,6 +5,12 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     {
+      path: '/login',
+      name: 'Login',
+      component: () => import('../views/Login.vue'),
+      meta: { public: true }
+    },
+    {
       path: '/',
       component: Layout,
       redirect: '/dashboard',
@@ -28,14 +34,33 @@ const router = createRouter({
           meta: { title: '智能教案生成', icon: 'Document' }
         },
         {
-          path: 'grading',
-          name: 'IntelligentGrading',
-          component: () => import('../views/IntelligentGrading.vue'),
-          meta: { title: '智能报告批阅', icon: 'EditPen' }
+          path: 'rag',
+          name: 'RagWorkbench',
+          component: () => import('../views/RagWorkbench.vue'),
+          meta: { title: 'RAG 知识库', icon: 'FolderOpened' }
         }
       ]
     }
   ]
+})
+
+router.beforeEach((to) => {
+  const token = localStorage.getItem('token')
+  const isPublicRoute = Boolean(to.meta.public)
+
+  if (!token && !isPublicRoute) {
+    return {
+      path: '/login',
+      query: { redirect: to.fullPath }
+    }
+  }
+
+  if (token && to.path === '/login') {
+    const redirect = typeof to.query.redirect === 'string' ? to.query.redirect : '/dashboard'
+    return redirect
+  }
+
+  return true
 })
 
 export default router

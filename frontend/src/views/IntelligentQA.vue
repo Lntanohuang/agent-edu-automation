@@ -118,7 +118,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, watch } from 'vue'
+import { ref, computed, nextTick, watch, onMounted } from 'vue'
 import { useChatStore } from '../stores/chat'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -139,7 +139,7 @@ const loading = ref(false)
 const messageContainer = ref()
 
 const md = new MarkdownIt({
-  html: true,
+  html: false,
   linkify: true,
   typographer: true
 })
@@ -158,8 +158,15 @@ const createNewChat = () => {
   chatStore.createConversation()
 }
 
-const selectConversation = (id: string) => {
-  chatStore.currentConversationId = id
+const selectConversation = async (id: string) => {
+  try {
+    loading.value = true
+    await chatStore.selectConversation(id)
+  } catch (_error) {
+    ElMessage.error('加载对话失败')
+  } finally {
+    loading.value = false
+  }
 }
 
 const deleteConversation = (id: string) => {
@@ -168,8 +175,11 @@ const deleteConversation = (id: string) => {
     cancelButtonText: '取消',
     type: 'warning'
   }).then(() => {
-    chatStore.deleteConversation(id)
-    ElMessage.success('删除成功')
+    chatStore.deleteConversation(id).then(() => {
+      ElMessage.success('删除成功')
+    }).catch(() => {
+      ElMessage.error('删除失败')
+    })
   })
 }
 
@@ -182,34 +192,18 @@ const sendMessage = async () => {
   
   const message = inputMessage.value
   inputMessage.value = ''
-  
-  // 添加用户消息
-  chatStore.addMessage(chatStore.currentConversationId, {
-    role: 'user',
-    content: message
-  })
-  
-  // 模拟 AI 回复
+
   loading.value = true
   await scrollToBottom()
-  
-  setTimeout(() => {
-    const responses = [
-      '这是一个很好的教学问题！我建议您可以从以下几个方面考虑：\n\n1. **明确教学目标** - 确保学生理解核心概念\n2. **设计互动环节** - 增加学生参与度\n3. **使用多媒体资源** - 丰富教学内容\n4. **及时反馈** - 帮助学生巩固知识',
-      '根据您的需求，我为您提供以下建议：\n\n- 采用**启发式教学**方法\n- 设计**分层教学**活动\n- 运用**项目式学习**模式\n- 结合**翻转课堂**理念\n\n这些方法可以有效提升教学效果。',
-      '我理解您的困惑。针对这个问题，您可以尝试：\n\n### 1. 课前准备\n- 深入了解学生学情\n- 准备充足的教学素材\n\n### 2. 课堂实施\n- 创设真实情境\n- 引导自主探究\n\n### 3. 课后反思\n- 收集学生反馈\n- 持续改进教学'
-    ]
-    
-    const randomResponse = responses[Math.floor(Math.random() * responses.length)]
-    
-    chatStore.addMessage(chatStore.currentConversationId, {
-      role: 'assistant',
-      content: randomResponse
-    })
-    
+
+  try {
+    await chatStore.sendMessage(message)
+  } catch (_error) {
+    ElMessage.error('发送失败，请检查后端服务或登录状态')
+  } finally {
     loading.value = false
-    scrollToBottom()
-  }, 1500)
+    await scrollToBottom()
+  }
 }
 
 const sendQuickQuestion = (question: string) => {
@@ -224,13 +218,39 @@ const handleEnter = (e: KeyboardEvent) => {
 }
 
 const clearMessages = () => {
-  if (currentConversation.value) {
-    currentConversation.value.messages = []
-  }
+  if (!currentConversation.value) return
+  chatStore.clearMessages(currentConversation.value.id).then(() => {
+    ElMessage.success('清空成功')
+  }).catch(() => {
+    ElMessage.error('清空失败')
+  })
 }
 
+onMounted(async () => {
+  try {
+    loading.value = true
+    await chatStore.refreshConversations()
+    if (chatStore.conversations.length > 0) {
+      await chatStore.selectConversation(chatStore.conversations[0].id)
+    } else {
+      chatStore.createConversation()
+    }
+  } catch (_error) {
+    ElMessage.error('加载会话失败，请先登录')
+    if (chatStore.conversations.length === 0) {
+      chatStore.createConversation()
+    }
+  } finally {
+    loading.value = false
+  }
+})
+
 const renderMarkdown = (content: string) => {
-  return md.render(content)
+  const normalized = String(content || '').trim()
+  if (!normalized) {
+    return '<p class="empty-message-hint">（该条消息内容为空，可能由历史异常数据导致）</p>'
+  }
+  return md.render(normalized)
 }
 
 const formatTime = (timestamp: number) => {
@@ -251,11 +271,6 @@ const scrollToBottom = async () => {
 }
 
 watch(() => currentConversation.value?.messages.length, scrollToBottom)
-
-// 初始化创建一个对话
-if (chatStore.conversations.length === 0) {
-  chatStore.createConversation()
-}
 </script>
 
 <style scoped lang="scss">
@@ -435,6 +450,12 @@ if (chatStore.conversations.length === 0) {
               border-radius: 8px;
               box-shadow: 0 2px 8px rgba(0,0,0,0.05);
               line-height: 1.6;
+
+              :deep(.empty-message-hint) {
+                margin: 0;
+                color: #999;
+                font-style: italic;
+              }
               
               &.typing {
                 display: flex;

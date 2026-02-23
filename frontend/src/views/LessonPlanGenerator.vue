@@ -12,8 +12,8 @@
           </template>
           
           <el-form :model="form" label-position="top" :rules="rules" ref="formRef">
-            <el-form-item label="学科" prop="subject">
-              <el-select v-model="form.subject" placeholder="选择学科" style="width: 100%">
+            <el-form-item label="课程方向" prop="subject">
+              <el-select v-model="form.subject" placeholder="选择法学课程方向" style="width: 100%">
                 <el-option
                   v-for="subject in subjects"
                   :key="subject"
@@ -23,8 +23,8 @@
               </el-select>
             </el-form-item>
             
-            <el-form-item label="年级" prop="grade">
-              <el-select v-model="form.grade" placeholder="选择年级" style="width: 100%">
+            <el-form-item label="适用年级" prop="grade">
+              <el-select v-model="form.grade" placeholder="选择大学年级/学段" style="width: 100%">
                 <el-option
                   v-for="grade in grades"
                   :key="grade"
@@ -37,35 +37,62 @@
             <el-form-item label="课题/主题" prop="topic">
               <el-input
                 v-model="form.topic"
-                placeholder="请输入课题或主题名称"
+                placeholder="如：物权变动、公平责任、行政复议程序"
                 clearable
               />
             </el-form-item>
             
-            <el-form-item label="课时" prop="duration">
-              <el-slider v-model="form.duration" :min="1" :max="4" show-stops />
-              <div class="slider-label">{{ form.duration }} 课时</div>
+            <el-form-item label="每周学时" prop="duration">
+              <el-slider v-model="form.duration" :min="1" :max="6" show-stops />
+              <div class="slider-label">{{ form.duration }} 学时/周</div>
+            </el-form-item>
+
+            <el-form-item label="课程性质" prop="courseType">
+              <el-select v-model="form.courseType" placeholder="选择课程性质" style="width: 100%">
+                <el-option label="专业必修" value="专业必修" />
+                <el-option label="专业选修" value="专业选修" />
+                <el-option label="通识选修" value="通识选修" />
+              </el-select>
+            </el-form-item>
+
+            <el-form-item label="课程学分" prop="credits">
+              <el-input-number v-model="form.credits" :min="1" :max="8" style="width: 100%" />
             </el-form-item>
             
             <el-form-item label="班级规模" prop="classSize">
-              <el-input-number v-model="form.classSize" :min="1" :max="100" style="width: 100%" />
+              <el-input-number v-model="form.classSize" :min="10" :max="300" style="width: 100%" />
+            </el-form-item>
+
+            <el-form-item label="考核方式" prop="assessmentMode">
+              <el-select v-model="form.assessmentMode" placeholder="选择考核方式" style="width: 100%">
+                <el-option label="期末闭卷 + 平时成绩" value="期末闭卷 + 平时成绩" />
+                <el-option label="课程论文 + 课堂展示" value="课程论文 + 课堂展示" />
+                <el-option label="案例分析 + 开卷考试" value="案例分析 + 开卷考试" />
+              </el-select>
             </el-form-item>
             
-            <el-form-item label="教学目标" prop="teachingGoals">
+            <el-form-item label="能力目标（法学）" prop="teachingGoals">
               <el-input
                 v-model="form.teachingGoals"
                 type="textarea"
                 :rows="3"
-                placeholder="描述您希望达到的教学目标..."
+                placeholder="如：法条检索、案例分析、法律论证、庭审表达"
               />
             </el-form-item>
             
-            <el-form-item label="特殊要求">
+            <el-form-item label="教材与参考书" prop="textbookVersion">
+              <el-input
+                v-model="form.textbookVersion"
+                placeholder="如：《民法学》（高教版）+《最高人民法院公报案例》"
+              />
+            </el-form-item>
+
+            <el-form-item label="特殊要求（可选）">
               <el-input
                 v-model="form.requirements"
                 type="textarea"
                 :rows="3"
-                placeholder="如有特殊要求请在此说明，如：需要融入多媒体、小组讨论等..."
+                placeholder="如：每3周一次案例研讨；包含模拟法庭；结合最新司法解释"
               />
             </el-form-item>
             
@@ -158,9 +185,9 @@
               <div class="plan-section">
                 <h3><el-icon><InfoFilled /></el-icon> 基本信息</h3>
                 <el-descriptions :column="2" border>
-                  <el-descriptions-item label="学科">{{ currentPlan.subject }}</el-descriptions-item>
-                  <el-descriptions-item label="年级">{{ currentPlan.grade }}</el-descriptions-item>
-                  <el-descriptions-item label="课时">{{ currentPlan.duration }} 课时</el-descriptions-item>
+                  <el-descriptions-item label="课程方向">{{ currentPlan.subject }}</el-descriptions-item>
+                  <el-descriptions-item label="适用年级">{{ currentPlan.grade }}</el-descriptions-item>
+                  <el-descriptions-item label="每周学时">{{ currentPlan.duration }} 学时</el-descriptions-item>
                   <el-descriptions-item label="授课时间">{{ formatDate(Date.now()) }}</el-descriptions-item>
                 </el-descriptions>
               </div>
@@ -277,6 +304,7 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { useLessonPlanStore, type LessonPlan } from '../stores/lessonPlan'
+import { lessonPlanApi } from '../api'
 import { ElMessage } from 'element-plus'
 import {
   Document,
@@ -302,89 +330,125 @@ const formRef = ref()
 const generating = ref(false)
 
 const form = reactive({
-  subject: '',
-  grade: '',
+  subject: '民法',
+  grade: '法学本科二年级',
   topic: '',
-  duration: 1,
-  classSize: 40,
-  teachingGoals: '',
+  duration: 2,
+  courseType: '专业必修',
+  credits: 3,
+  classSize: 60,
+  assessmentMode: '期末闭卷 + 平时成绩',
+  teachingGoals: '掌握法条检索、案例分析与法律论证能力',
+  textbookVersion: '《民法学》（高教版）',
   requirements: ''
 })
 
 const rules = {
-  subject: [{ required: true, message: '请选择学科', trigger: 'change' }],
-  grade: [{ required: true, message: '请选择年级', trigger: 'change' }],
-  topic: [{ required: true, message: '请输入课题', trigger: 'blur' }]
+  subject: [{ required: true, message: '请选择课程方向', trigger: 'change' }],
+  grade: [{ required: true, message: '请选择适用年级', trigger: 'change' }],
+  topic: [{ required: true, message: '请输入课题', trigger: 'blur' }],
+  courseType: [{ required: true, message: '请选择课程性质', trigger: 'change' }],
+  assessmentMode: [{ required: true, message: '请选择考核方式', trigger: 'change' }]
 }
 
-const subjects = ['语文', '数学', '英语', '物理', '化学', '生物', '历史', '地理', '政治', '音乐', '美术', '体育', '信息技术']
-const grades = ['一年级', '二年级', '三年级', '四年级', '五年级', '六年级', '初一', '初二', '初三', '高一', '高二', '高三']
+const subjects = ['法理学', '宪法学', '民法', '刑法', '行政法与行政诉讼法', '民事诉讼法', '刑事诉讼法', '商法', '经济法', '国际法']
+const grades = ['法学本科一年级', '法学本科二年级', '法学本科三年级', '法学本科四年级', '法学硕士']
 
 const currentPlan = ref<LessonPlan | null>(null)
+
+const toStringArray = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return []
+  return value.map((item) => String(item))
+}
+
+const mapSemesterPlanToLessonPlan = (
+  semesterPlan: Record<string, unknown>,
+  fallback: { subject: string; grade: string; topic: string; duration: number }
+): LessonPlan => {
+  const weeklyPlans = Array.isArray(semesterPlan.weekly_plans)
+    ? (semesterPlan.weekly_plans as Record<string, unknown>[])
+    : []
+
+  const mergedKeyPoints = weeklyPlans.flatMap((item) => toStringArray(item.key_points))
+  const mergedDifficulties = weeklyPlans.flatMap((item) => toStringArray(item.difficulties))
+  const mergedHomework = weeklyPlans
+    .map((item) => item.homework)
+    .filter((item) => item !== undefined && item !== null)
+    .map((item) => String(item))
+
+  const procedures = weeklyPlans.map((item) => ({
+    stage: `第${String(item.week ?? '')}周 ${String(item.unit_topic ?? '')}`.trim(),
+    duration: fallback.duration * 45,
+    content: toStringArray(item.key_points).join('；') || '见周计划',
+    activities: toStringArray(item.activities).join('；') || '见周计划',
+    designIntent: toStringArray(item.objectives).join('；') || '达成周目标'
+  }))
+
+  return {
+    id: Date.now().toString(),
+    title: String(semesterPlan.semester_title || `${fallback.grade}${fallback.subject} - ${fallback.topic}`),
+    subject: String(semesterPlan.subject || fallback.subject),
+    grade: String(semesterPlan.grade || fallback.grade),
+    duration: fallback.duration,
+    objectives: toStringArray(semesterPlan.semester_goals),
+    keyPoints: Array.from(new Set(mergedKeyPoints)),
+    difficulties: Array.from(new Set(mergedDifficulties)),
+    teachingMethods: toStringArray(semesterPlan.teaching_strategies),
+    teachingAids: toStringArray(semesterPlan.resource_plan),
+    procedures,
+    homework: mergedHomework.join('\n') || '参考周计划作业安排',
+    reflection: toStringArray(semesterPlan.assessment_plan).join('\n'),
+    createdAt: Date.now()
+  }
+}
 
 const generateLessonPlan = async () => {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
   
   generating.value = true
-  
-  // 模拟 AI 生成
-  setTimeout(() => {
-    const plan: LessonPlan = {
-      id: Date.now().toString(),
-      title: `${form.grade}${form.subject} - ${form.topic}`,
+
+  try {
+    const response = await lessonPlanApi.generate({
       subject: form.subject,
       grade: form.grade,
-      duration: form.duration,
-      objectives: [
-        '知识与技能：掌握核心概念和基本方法',
-        '过程与方法：培养分析问题和解决问题的能力',
-        '情感态度与价值观：激发学习兴趣，培养科学态度'
-      ],
-      keyPoints: ['核心知识点的理解和掌握', '基本方法的运用'],
-      difficulties: ['知识点的深入理解', '实际问题的分析和解决'],
-      teachingMethods: ['讲授法', '讨论法', '演示法', '练习法'],
-      teachingAids: ['多媒体课件', '实物教具', '练习册'],
-      procedures: [
-        {
-          stage: '导入新课',
-          duration: 5,
-          content: '通过生活实例引入课题，激发学生兴趣',
-          activities: '教师展示案例，学生观察思考',
-          designIntent: '创设情境，引发学习兴趣'
-        },
-        {
-          stage: '新课讲授',
-          duration: 20,
-          content: '讲解核心概念，配合例题分析',
-          activities: '教师讲解，学生听讲、记笔记、回答问题',
-          designIntent: '系统传授知识，确保理解'
-        },
-        {
-          stage: '课堂练习',
-          duration: 10,
-          content: '学生独立完成练习题，巩固所学',
-          activities: '学生练习，教师巡视指导',
-          designIntent: '及时巩固，发现问题'
-        },
-        {
-          stage: '小结作业',
-          duration: 5,
-          content: '总结本节课内容，布置课后作业',
-          activities: '师生共同总结，记录作业',
-          designIntent: '梳理知识，延伸学习'
-        }
-      ],
-      homework: '1. 完成课后练习题 1-5\n2. 预习下节课内容\n3. 收集生活中的相关实例',
-      reflection: '',
-      createdAt: Date.now()
+      topic: form.topic,
+      totalWeeks: 18,
+      lessonsPerWeek: form.duration,
+      classSize: form.classSize,
+      courseType: form.courseType,
+      credits: form.credits,
+      assessmentMode: form.assessmentMode,
+      teachingGoals: form.teachingGoals,
+      requirements: `课程性质：${form.courseType}；考核方式：${form.assessmentMode}；课程学分：${form.credits}。${form.requirements || ''}`,
+      textbookVersion: form.textbookVersion,
+      difficulty: '大学法学'
+    })
+
+    const payload = response.data
+    if (!payload.success) {
+      throw new Error(payload.message || '教案生成失败')
     }
-    
+
+    const plan = mapSemesterPlanToLessonPlan(
+      payload.semesterPlan || {},
+      {
+        subject: form.subject,
+        grade: form.grade,
+        topic: form.topic,
+        duration: form.duration
+      }
+    )
+
     currentPlan.value = plan
     lessonPlanStore.lessonPlans.unshift(plan)
-    generating.value = false
     ElMessage.success('教案生成成功！')
-  }, 2000)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '教案生成失败'
+    ElMessage.error(message)
+  } finally {
+    generating.value = false
+  }
 }
 
 const viewPlan = (plan: LessonPlan) => {

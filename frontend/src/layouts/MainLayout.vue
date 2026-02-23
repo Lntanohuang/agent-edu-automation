@@ -29,10 +29,10 @@
           <el-icon><Document /></el-icon>
           <span>智能教案生成</span>
         </el-menu-item>
-        
-        <el-menu-item index="/grading">
-          <el-icon><EditPen /></el-icon>
-          <span>智能报告批阅</span>
+
+        <el-menu-item index="/rag">
+          <el-icon><FolderOpened /></el-icon>
+          <span>RAG 知识库</span>
         </el-menu-item>
       </el-menu>
       
@@ -61,7 +61,7 @@
               <el-dropdown-menu>
                 <el-dropdown-item>个人中心</el-dropdown-item>
                 <el-dropdown-item>修改密码</el-dropdown-item>
-                <el-dropdown-item divided>退出登录</el-dropdown-item>
+                <el-dropdown-item divided @click="handleLogout">退出登录</el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -80,17 +80,35 @@
 </template>
 
 <script setup lang="ts">
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { authApi } from '../api'
 import {
   HomeFilled,
   ChatDotRound,
   Document,
-  EditPen,
+  FolderOpened,
   Bell,
   UserFilled,
   ArrowDown,
   School,
   Setting
 } from '@element-plus/icons-vue'
+
+const router = useRouter()
+
+const handleLogout = async () => {
+  try {
+    await authApi.logout()
+  } catch (_error) {
+    // 忽略后端退出失败，本地登录态仍需清理
+  } finally {
+    localStorage.removeItem('token')
+    localStorage.removeItem('refreshToken')
+    ElMessage.success('已退出登录')
+    await router.replace('/login')
+  }
+}
 </script>
 
 <style scoped lang="scss">
