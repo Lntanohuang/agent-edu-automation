@@ -1,1 +1,1 @@
-# teaching_task_generator skill package
+"""教学探索任务生成技能包。"""

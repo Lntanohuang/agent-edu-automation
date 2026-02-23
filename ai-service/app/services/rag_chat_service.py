@@ -40,6 +40,7 @@ async def _summarize_history_with_ai(
     *,
     langsmith_extra: dict | None = None,
 ) -> str:
+    """调用 LLM 做历史摘要压缩，产出后续可复用的长期记忆。"""
     prompt = (
         "你是对话记忆压缩器。请把对话整理成可用于后续问答的摘要。\n"
         "要求：\n"
@@ -71,6 +72,7 @@ async def _run_rag_pipeline(
     source_audit_skill: SourceAuditSkill,
     teaching_task_skill: TeachingTaskGeneratorSkill,
 ) -> dict:
+    """执行 RAG 主链路：检索 -> 技能生成 -> 审计与任务补全。"""
     vector_store = get_rag_vector_store()
     retrieval_query = query
     if history_text:
@@ -109,6 +111,8 @@ async def _run_rag_pipeline(
 
 
 class RagChatService:
+    """RAG 对话编排服务，负责记忆、检索、技能路由和持久化。"""
+
     def __init__(self):
         self.source_audit_skill = SourceAuditSkill()
         self.teaching_task_skill = TeachingTaskGeneratorSkill()
@@ -117,6 +121,7 @@ class RagChatService:
 
     @staticmethod
     def _doc_to_message(doc: dict) -> BaseMessage | None:
+        """将 Mongo 文档恢复为 LangChain 消息对象。"""
         role = str(doc.get("role") or "").strip()
         content = str(doc.get("content") or "").strip()
         if not content:
@@ -138,8 +143,10 @@ class RagChatService:
         max_history_tokens: int,
         langsmith_extra: dict | None = None,
     ) -> dict:
+        """单轮对话入口：补历史、做摘要、跑 RAG、并落库结果。"""
         effective_history_messages = list(history_messages)
         if conversation_id and not effective_history_messages:
+            # 前端未传历史时，从 Mongo 回填最近消息用于上下文续写。
             persisted_docs = self.mongo_chat_store.list_recent_messages(
                 conversation_id,
                 limit=settings.mongodb_history_limit,
@@ -163,6 +170,7 @@ class RagChatService:
             state = self.summary_store.get_or_create(conversation_id)
             self.summary_store.reset_if_history_restarted(state, len(effective_history_messages))
 
+            # 有状态会话：按轮次做增量摘要，降低长上下文成本。
             if should_summarize_stateful(
                 state=state,
                 user_turn_count=user_turn_count,
@@ -192,6 +200,7 @@ class RagChatService:
             summary_text = state.summary
             state.updated_at = time.time()
         else:
+            # 无状态会话：达到阈值时对本轮完整历史做一次摘要。
             if should_summarize_stateless(
                 user_turn_count=user_turn_count,
                 summarization_interval_turns=SUMMARY_EVERY_USER_TURNS,

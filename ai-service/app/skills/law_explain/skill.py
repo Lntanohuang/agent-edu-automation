@@ -1,3 +1,5 @@
+"""概念解释技能：聚焦定义、区分与常见误区。"""
+
 import re
 from typing import List
 
@@ -11,6 +13,8 @@ from app.skills.schemas import SkillResponse
 
 
 class LawExplainOutput(BaseModel):
+    """概念解释技能的结构化输出。"""
+
     definition: str = Field(description="核心概念定义")
     key_points: List[str] = Field(default_factory=list, description="关键要点")
     distinctions: List[str] = Field(default_factory=list, description="易混概念区分")
@@ -19,9 +23,12 @@ class LawExplainOutput(BaseModel):
 
 
 class LawExplainSkill(SkillBase):
+    """面向概念解释类问题的技能实现。"""
+
     name = "law_explain"
 
     def can_handle(self, query: str) -> bool:
+        """根据关键词判断是否命中概念解释场景。"""
         patterns = [
             r"是什么",
             r"区别",
@@ -32,6 +39,7 @@ class LawExplainSkill(SkillBase):
         return any(re.search(pattern, query) for pattern in patterns)
 
     async def run(self, query: str, retrieved_docs: List[Document]) -> SkillResponse:
+        """执行概念解释并返回统一技能结果。"""
         context_text = build_context_text(retrieved_docs)
         llm = ollama_qwen_llm.with_structured_output(LawExplainOutput, method="json_schema")
         output = await llm.ainvoke(

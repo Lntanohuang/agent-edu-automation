@@ -1,1 +1,1 @@
-# law_explain skill package
+"""法学概念解释技能包。"""

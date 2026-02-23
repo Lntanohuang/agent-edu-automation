@@ -10,6 +10,7 @@ from app.rag.loader import load_document
 
 
 logger = logging.getLogger(__name__)
+# Embedding 写入策略：分批、重试、指数退避。
 EMBED_BATCH_SIZE = 32
 EMBED_MAX_RETRIES = 3
 EMBED_RETRY_WAIT_SECONDS = 1.5
@@ -22,6 +23,7 @@ def _store_documents_in_batches(
     ids: list[str] | None = None,
     batch_size: int = EMBED_BATCH_SIZE,
 ) -> None:
+    """将文档按批写入向量库，失败时重试。"""
     total = len(docs)
     if total == 0:
         return
@@ -120,6 +122,7 @@ def build_and_store_chunks(
             metadata["chunk_index"] = index
             doc.metadata = metadata
 
+        # 使用稳定 chunk id，保证重试时不会重复写入相同内容。
         chunk_ids = [
             f"{book_id}_{index}_{sha1((source_name + '|' + doc.page_content).encode('utf-8')).hexdigest()[:12]}"
             for index, doc in enumerate(all_splits)

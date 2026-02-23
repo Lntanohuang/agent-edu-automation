@@ -1,3 +1,5 @@
+"""Skills 基础抽象与通用工具方法。"""
+
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import List
@@ -8,6 +10,7 @@ from app.skills.schemas import SkillResponse
 
 
 def resolve_book_label(metadata: dict) -> str:
+    """从 metadata 中解析书本标签。"""
     label = str(metadata.get("book_label") or "").strip()
     if label:
         return label
@@ -21,10 +24,12 @@ def resolve_book_label(metadata: dict) -> str:
 
 
 def collect_book_labels(docs: List[Document]) -> List[str]:
+    """收集检索文档的去重书本标签。"""
     return sorted({resolve_book_label(doc.metadata or {}) for doc in docs if doc is not None})
 
 
 def build_sources(docs: List[Document]) -> List[str]:
+    """生成可读来源列表（包含章/节/页）。"""
     sources: List[str] = []
     for doc in docs:
         if doc is None:
@@ -49,6 +54,7 @@ def build_sources(docs: List[Document]) -> List[str]:
 
 
 def build_context_text(docs: List[Document], *, max_docs: int = 4, max_chars: int = 4200) -> str:
+    """将检索文档压缩为可放入提示词的上下文文本。"""
     chunks: List[str] = []
     consumed = 0
     for idx, doc in enumerate(docs[:max_docs], start=1):
@@ -65,12 +71,16 @@ def build_context_text(docs: List[Document], *, max_docs: int = 4, max_chars: in
 
 
 class SkillBase(ABC):
+    """所有技能的统一接口。"""
+
     name: str = "base"
 
     @abstractmethod
     def can_handle(self, query: str) -> bool:
+        """判断当前技能是否适合处理该问题。"""
         raise NotImplementedError
 
     @abstractmethod
     async def run(self, query: str, retrieved_docs: List[Document]) -> SkillResponse:
+        """执行技能并返回统一结构结果。"""
         raise NotImplementedError

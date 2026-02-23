@@ -1,3 +1,5 @@
+"""探索任务生成技能：补全可执行的学习任务。"""
+
 from typing import List
 
 from langchain_core.documents import Document
@@ -9,6 +11,8 @@ from app.skills.base import build_context_text, collect_book_labels
 
 
 class TeachingTasksOutput(BaseModel):
+    """探索任务生成的结构化输出。"""
+
     tasks: List[str] = Field(default_factory=list, description="Exploration/learning tasks")
 
 
@@ -28,6 +32,7 @@ class TeachingTaskGeneratorSkill:
         retrieved_docs: List[Document],
         existing_tasks: List[str],
     ) -> List[str]:
+        """基于问题与检索结果生成 2-3 条探索任务。"""
         if existing_tasks and len(existing_tasks) >= 2:
             return existing_tasks[:3]
 

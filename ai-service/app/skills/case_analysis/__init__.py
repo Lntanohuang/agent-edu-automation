@@ -1,1 +1,1 @@
-# case_analysis skill package
+"""案例分析技能包。"""

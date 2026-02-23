@@ -10,6 +10,8 @@ from langchain_core.messages.utils import count_tokens_approximately, trim_messa
 
 @dataclass
 class ConversationSummaryState:
+    """单个会话的摘要状态。"""
+
     summary: str = ""
     last_summarized_message_count: int = 0
     last_summarized_user_turns: int = 0
@@ -18,11 +20,15 @@ class ConversationSummaryState:
 
 
 class ConversationSummaryStore:
+    """会话摘要内存存储（进程内）。"""
+
     def __init__(self, max_conversations: int = 500):
+        """初始化摘要存储，并设置最大会话数。"""
         self._max_conversations = max_conversations
         self._summaries: dict[str, ConversationSummaryState] = {}
 
     def get_or_create(self, conversation_id: str) -> ConversationSummaryState:
+        """获取会话摘要状态；不存在则创建。"""
         state = self._summaries.get(conversation_id)
         if state is not None:
             return state
@@ -39,6 +45,7 @@ class ConversationSummaryStore:
         return state
 
     def reset_if_history_restarted(self, state: ConversationSummaryState, current_history_count: int) -> None:
+        """当历史消息数量回退时，判定会话重开并重置摘要。"""
         # If the client sends fewer history messages than previous round,
         # treat it as a restarted timeline.
         if current_history_count < state.last_seen_message_count:
@@ -50,6 +57,7 @@ class ConversationSummaryStore:
 
 
 def trim_history_messages(messages: list[BaseMessage], max_tokens: int) -> list[BaseMessage]:
+    """按 token 预算裁剪历史消息，优先保留最近上下文。"""
     if not messages:
         return []
     try:
@@ -67,6 +75,7 @@ def trim_history_messages(messages: list[BaseMessage], max_tokens: int) -> list[
 
 
 def history_to_text(messages: list[BaseMessage]) -> str:
+    """把消息对象列表转换为统一文本表示。"""
     lines: list[str] = []
     for msg in messages:
         if isinstance(msg, SystemMessage):
@@ -84,6 +93,7 @@ def history_to_text(messages: list[BaseMessage]) -> str:
 
 
 def message_content_to_text(content: object) -> str:
+    """把模型 content（str/list/dict）标准化为纯文本。"""
     if isinstance(content, str):
         return content.strip()
     if isinstance(content, list):
@@ -100,6 +110,7 @@ def message_content_to_text(content: object) -> str:
 
 
 def count_user_turns(messages: list[BaseMessage]) -> int:
+    """统计用户消息轮次。"""
     return sum(1 for message in messages if isinstance(message, HumanMessage))
 
 
@@ -109,6 +120,7 @@ def should_summarize_stateful(
     user_turn_count: int,
     summarization_interval_turns: int,
 ) -> bool:
+    """有状态模式下，判断是否触发一次增量摘要。"""
     new_user_turns = max(user_turn_count - state.last_summarized_user_turns, 0)
     return summarization_interval_turns > 0 and new_user_turns >= summarization_interval_turns
 
@@ -118,10 +130,12 @@ def should_summarize_stateless(
     user_turn_count: int,
     summarization_interval_turns: int,
 ) -> bool:
+    """无状态模式下，判断是否触发一次整体摘要。"""
     return summarization_interval_turns > 0 and user_turn_count >= summarization_interval_turns
 
 
 def compose_history_context(summary: str, recent_history_text: str) -> str:
+    """拼接长期摘要和近期对话，供后续检索/生成使用。"""
     parts: list[str] = []
     summary = summary.strip()
     recent_history_text = recent_history_text.strip()

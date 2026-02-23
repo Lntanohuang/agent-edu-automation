@@ -1,3 +1,5 @@
+"""案例分析技能：按事实-争点-规则适用-结论作答。"""
+
 import re
 from typing import List
 
@@ -11,6 +13,8 @@ from app.skills.schemas import SkillResponse
 
 
 class CaseAnalysisOutput(BaseModel):
+    """案例分析技能的结构化输出。"""
+
     fact_summary: str = Field(description="案情事实总结")
     issues: List[str] = Field(default_factory=list, description="争议焦点")
     rule_application: str = Field(description="规则适用分析")
@@ -19,9 +23,12 @@ class CaseAnalysisOutput(BaseModel):
 
 
 class CaseAnalysisSkill(SkillBase):
+    """面向案例类问题的技能实现。"""
+
     name = "case_analysis"
 
     def can_handle(self, query: str) -> bool:
+        """根据关键词判断是否命中案例场景。"""
         patterns = [
             r"案例",
             r"案情",
@@ -32,6 +39,7 @@ class CaseAnalysisSkill(SkillBase):
         return any(re.search(pattern, query) for pattern in patterns)
 
     async def run(self, query: str, retrieved_docs: List[Document]) -> SkillResponse:
+        """执行案例分析并返回统一技能结果。"""
         context_text = build_context_text(retrieved_docs)
         llm = ollama_qwen_llm.with_structured_output(CaseAnalysisOutput, method="json_schema")
         output = await llm.ainvoke(

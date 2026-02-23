@@ -1,3 +1,5 @@
+"""来源审计技能：根据证据完整度修正回答与置信度。"""
+
 from dataclasses import dataclass
 from typing import List
 
@@ -6,6 +8,8 @@ from langchain_core.documents import Document
 
 @dataclass
 class SourceAuditResult:
+    """来源审计结果。"""
+
     audited_answer: str
     confidence: str
     source_notes: List[str]
@@ -27,6 +31,7 @@ class SourceAuditSkill:
         sources: List[str],
         retrieved_docs: List[Document],
     ) -> SourceAuditResult:
+        """校验回答证据，并返回审计后的结果。"""
         source_notes: List[str] = []
         has_sources = bool(sources)
         has_docs = bool(retrieved_docs)

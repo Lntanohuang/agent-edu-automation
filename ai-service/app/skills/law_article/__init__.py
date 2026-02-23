@@ -1,1 +1,1 @@
-# law_article skill package
+"""法条解析技能包。"""

@@ -1,3 +1,5 @@
+"""法条解析技能：聚焦条文依据与适用边界。"""
+
 import re
 from typing import List
 
@@ -11,6 +13,8 @@ from app.skills.schemas import SkillResponse
 
 
 class LawArticleOutput(BaseModel):
+    """法条技能的结构化输出。"""
+
     conclusion: str = Field(description="结论")
     legal_basis: List[str] = Field(default_factory=list, description="条文依据")
     applicability: str = Field(description="适用前提与边界")
@@ -19,9 +23,12 @@ class LawArticleOutput(BaseModel):
 
 
 class LawArticleSkill(SkillBase):
+    """面向法条/构成要件类问题的技能实现。"""
+
     name = "law_article"
 
     def can_handle(self, query: str) -> bool:
+        """根据关键词判断是否命中法条场景。"""
         patterns = [
             r"第\s*\d+\s*条",
             r"法条",
@@ -32,6 +39,7 @@ class LawArticleSkill(SkillBase):
         return any(re.search(pattern, query) for pattern in patterns)
 
     async def run(self, query: str, retrieved_docs: List[Document]) -> SkillResponse:
+        """执行法条分析并返回统一技能结果。"""
         context_text = build_context_text(retrieved_docs)
         llm = ollama_qwen_llm.with_structured_output(LawArticleOutput, method="json_schema")
         output = await llm.ainvoke(

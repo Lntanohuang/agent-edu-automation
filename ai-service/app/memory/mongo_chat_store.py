@@ -20,7 +20,10 @@ except Exception:
 
 
 class MongoChatStore:
+    """MongoDB 会话消息存储，连接失败时自动降级。"""
+
     def __init__(self) -> None:
+        """初始化 Mongo 连接、集合和索引。"""
         self.enabled = bool(settings.mongodb_enabled)
         self._collection = None
 
@@ -55,6 +58,7 @@ class MongoChatStore:
             self._collection = None
 
     def list_recent_messages(self, conversation_id: str, limit: int | None = None) -> list[dict[str, Any]]:
+        """按会话读取最近消息（时间升序返回）。"""
         if not self.enabled or self._collection is None or not conversation_id:
             return []
         effective_limit = max(1, min(limit or settings.mongodb_history_limit, 200))
@@ -79,6 +83,7 @@ class MongoChatStore:
         content: str,
         metadata: dict[str, Any] | None = None,
     ) -> None:
+        """向会话追加一条消息。"""
         if not self.enabled or self._collection is None or not conversation_id or not content:
             return
         doc = {
