@@ -10,7 +10,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 
@@ -78,51 +77,6 @@ public class ChatController {
         String token = authHeader.replace("Bearer ", "");
         Long userId = jwtUtil.getUserIdFromToken(token);
         return Result.success(chatService.sendMessage(userId, request));
-    }
-
-    /**
-     * 流式发送消息 (SSE)
-     * 
-     * GET /api/chat/stream?message=xxx&conversationId=1
-     * Authorization: Bearer {token}
-     * 
-     * 响应: SSE 流
-     * data: {"content": "这是", "done": false}
-     * data: {"content": "回复", "done": false}
-     * data: {"content": "内容", "done": true}
-     * 
-     * TODO: 实际项目中需要调用 AI 服务的流式接口
-     */
-    @GetMapping("/stream")
-    public SseEmitter streamMessage(
-            @RequestHeader("Authorization") String authHeader,
-            @RequestParam String message,
-            @RequestParam(required = false) Long conversationId) {
-        
-        String token = authHeader.replace("Bearer ", "");
-        Long userId = jwtUtil.getUserIdFromToken(token);
-        
-        SseEmitter emitter = new SseEmitter(120000L); // 2分钟超时
-        
-        // TODO: 实现流式调用 AI 服务
-        // 模拟流式响应
-        new Thread(() -> {
-            try {
-                String[] words = "这是一个流式回复示例".split("");
-                for (String word : words) {
-                    emitter.send(SseEmitter.event()
-                            .data("{\"content\": \"" + word + "\", \"done\": false}"));
-                    Thread.sleep(100);
-                }
-                emitter.send(SseEmitter.event()
-                        .data("{\"content\": \"\", \"done\": true}"));
-                emitter.complete();
-            } catch (Exception e) {
-                emitter.completeWithError(e);
-            }
-        }).start();
-        
-        return emitter;
     }
 
     /**

@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 消息响应 DTO
@@ -28,4 +29,10 @@ public class ChatMessageResponse {
     private String role;
     private LocalDateTime timestamp;
     private Integer tokens;
+    private String skillUsed;
+    private List<String> sources;
+    private List<String> explorationTasks;
+    private List<String> bookLabels;
+    private String confidence;
+    private List<String> auditNotes;
 }
