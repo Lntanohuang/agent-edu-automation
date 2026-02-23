@@ -64,6 +64,16 @@ class Settings(BaseSettings):
     
     # 限流配置
     rate_limit_per_minute: int = Field(default=60, description="每分钟请求限制")
+
+    # LangSmith 配置
+    langsmith_project_name: str = Field(default="智能教育平台-AI-Service", description="LangSmith Project 名称")
+
+    # MongoDB 对话存储配置
+    mongodb_enabled: bool = Field(default=True, description="是否启用 MongoDB 对话存储")
+    mongodb_uri: str = Field(default="mongodb://127.0.0.1:27017", description="MongoDB 连接 URI")
+    mongodb_database: str = Field(default="ai_service", description="MongoDB 数据库名")
+    mongodb_chat_collection: str = Field(default="rag_chat_messages", description="MongoDB 对话集合名")
+    mongodb_history_limit: int = Field(default=40, ge=1, le=200, description="从 Mongo 回填历史消息数量")
     
 @lru_cache()
 def get_settings() -> Settings:

@@ -1,4 +1,5 @@
 import logging
+import time
 from hashlib import sha1
 from pathlib import Path
 from typing import Any, Dict
@@ -9,6 +10,54 @@ from app.rag.loader import load_document
 
 
 logger = logging.getLogger(__name__)
+EMBED_BATCH_SIZE = 32
+EMBED_MAX_RETRIES = 3
+EMBED_RETRY_WAIT_SECONDS = 1.5
+
+
+def _store_documents_in_batches(
+    vector_store: Any,
+    docs: list,
+    *,
+    ids: list[str] | None = None,
+    batch_size: int = EMBED_BATCH_SIZE,
+) -> None:
+    total = len(docs)
+    if total == 0:
+        return
+    if ids is not None and len(ids) != total:
+        raise ValueError("ids 长度必须与 docs 一致")
+
+    for start in range(0, total, batch_size):
+        end = min(start + batch_size, total)
+        batch = docs[start:end]
+        batch_ids = ids[start:end] if ids is not None else None
+        last_error: Exception | None = None
+        for attempt in range(1, EMBED_MAX_RETRIES + 1):
+            try:
+                vector_store.add_documents(batch, ids=batch_ids)
+                logger.info(
+                    "Stored embedding batch: start=%d, end=%d, total=%d",
+                    start,
+                    end,
+                    total,
+                )
+                last_error = None
+                break
+            except Exception as exc:
+                last_error = exc
+                logger.warning(
+                    "Embedding batch failed: start=%d, end=%d, attempt=%d/%d, error=%s",
+                    start,
+                    end,
+                    attempt,
+                    EMBED_MAX_RETRIES,
+                    str(exc),
+                )
+                if attempt < EMBED_MAX_RETRIES:
+                    time.sleep(EMBED_RETRY_WAIT_SECONDS * attempt)
+        if last_error is not None:
+            raise last_error
 
 
 def build_and_store_chunks(
@@ -71,7 +120,17 @@ def build_and_store_chunks(
             metadata["chunk_index"] = index
             doc.metadata = metadata
 
-        vector_store.add_documents(all_splits)
+        chunk_ids = [
+            f"{book_id}_{index}_{sha1((source_name + '|' + doc.page_content).encode('utf-8')).hexdigest()[:12]}"
+            for index, doc in enumerate(all_splits)
+        ]
+
+        _store_documents_in_batches(
+            vector_store,
+            all_splits,
+            ids=chunk_ids,
+            batch_size=EMBED_BATCH_SIZE,
+        )
         logger.info("Stored chunks into vector store: chunks=%d", chunk_count)
 
         return {
