@@ -1,5 +1,5 @@
 <template>
-  <div class="lesson-plan-generator">
+  <div class="lesson-plan-generator page-view">
     <el-row :gutter="24">
       <!-- 左侧：生成表单 -->
       <el-col :span="8">
@@ -145,15 +145,15 @@
             <p>在左侧填写教学参数，AI 将为您生成完整的教案</p>
             <div class="features">
               <div class="feature-item">
-                <el-icon size="24" color="#409eff"><Timer /></el-icon>
+                <el-icon size="24" color="var(--color-primary)"><Timer /></el-icon>
                 <span>节省时间</span>
               </div>
               <div class="feature-item">
-                <el-icon size="24" color="#67c23a"><CircleCheck /></el-icon>
+                <el-icon size="24" color="var(--color-accent)"><CircleCheck /></el-icon>
                 <span>专业规范</span>
               </div>
               <div class="feature-item">
-                <el-icon size="24" color="#e6a23c"><Edit /></el-icon>
+                <el-icon size="24" color="var(--text-secondary)"><Edit /></el-icon>
                 <span>可编辑调整</span>
               </div>
             </div>
@@ -172,8 +172,8 @@
               </div>
               <div class="preview-actions">
                 <el-button type="primary" :icon="Edit">编辑</el-button>
-                <el-button type="success" :icon="Download" @click="exportPlan">导出</el-button>
-                <el-button type="warning" :icon="Share">分享</el-button>
+                <el-button :icon="Download" @click="exportPlan">导出</el-button>
+                <el-button :icon="Share">分享</el-button>
                 <el-button :icon="Printer">打印</el-button>
               </div>
             </div>
@@ -489,194 +489,214 @@ const formatDate = (timestamp: number) => {
 
 <style scoped lang="scss">
 .lesson-plan-generator {
+  :deep(.el-row) {
+    flex-wrap: nowrap;
+  }
+
   .generate-form {
+    border-radius: 16px;
+
     .card-header {
       display: flex;
       align-items: center;
       gap: 8px;
-      font-weight: 600;
+      font-weight: 620;
+      color: var(--text-primary);
     }
-    
+
     .slider-label {
       text-align: center;
-      color: #666;
+      color: var(--text-secondary);
       margin-top: 8px;
+      font-size: 12px;
     }
   }
-  
+
   .history-card {
+    border-radius: 16px;
+
     .card-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      color: var(--text-primary);
     }
-    
+
     .history-item {
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 12px;
+      gap: 10px;
+      padding: 10px 12px;
       cursor: pointer;
-      border-radius: 8px;
-      transition: background 0.3s;
-      
+      border-radius: 10px;
+      border: 1px solid transparent;
+      transition: all 0.2s ease;
+
       &:hover {
-        background: #f5f7fa;
+        border-color: var(--border-color);
+        background: var(--surface-2);
       }
-      
+
       .history-info {
         flex: 1;
-        
+
         .history-title {
           font-size: 14px;
-          color: #333;
+          color: var(--text-primary);
           margin-bottom: 4px;
         }
-        
+
         .history-time {
           font-size: 12px;
-          color: #999;
+          color: var(--text-tertiary);
         }
       }
     }
   }
-  
+
   .empty-preview {
-    height: calc(100vh - 140px);
-    
+    min-height: 720px;
+
     :deep(.el-card__body) {
       height: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
     }
-    
+
     .empty-content {
       text-align: center;
-      
+
       h2 {
         margin: 24px 0 12px;
         font-size: 24px;
-        color: #333;
+        color: var(--text-primary);
       }
-      
+
       p {
-        color: #999;
-        margin-bottom: 40px;
+        color: var(--text-secondary);
+        margin-bottom: 34px;
       }
-      
+
       .features {
         display: flex;
         justify-content: center;
-        gap: 40px;
-        
+        gap: 34px;
+
         .feature-item {
           display: flex;
           flex-direction: column;
           align-items: center;
           gap: 8px;
-          
+
           span {
             font-size: 14px;
-            color: #666;
+            color: var(--text-secondary);
           }
         }
       }
     }
   }
-  
+
   .plan-preview {
-    height: calc(100vh - 140px);
-    
+    min-height: 720px;
+
     .preview-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      
+
       .preview-title {
         flex: 1;
         margin-right: 20px;
-        
+
         .title-input {
+          :deep(.el-input__wrapper) {
+            box-shadow: none;
+            border-color: transparent;
+            background: transparent;
+          }
+
           :deep(.el-input__inner) {
             font-size: 18px;
-            font-weight: 600;
+            font-weight: 620;
+            color: var(--text-primary);
           }
         }
       }
-      
+
       .preview-actions {
         display: flex;
         gap: 8px;
       }
     }
-    
+
     .plan-content {
       padding: 20px;
-      
+
       .plan-section {
         margin-bottom: 32px;
-        
+
         h3 {
           display: flex;
           align-items: center;
           gap: 8px;
           font-size: 18px;
           margin-bottom: 16px;
-          color: #333;
-          padding-bottom: 12px;
-          border-bottom: 2px solid #e4e7ed;
+          color: var(--text-primary);
+          padding-bottom: 10px;
+          border-bottom: 1px solid var(--border-color);
         }
-        
+
         h4 {
           font-size: 14px;
-          color: #666;
+          color: var(--text-secondary);
           margin-bottom: 12px;
         }
-        
+
         .editable-list {
           .list-item {
             display: flex;
             align-items: center;
             gap: 8px;
             margin-bottom: 8px;
-            
+
             .item-number {
-              color: #409eff;
-              font-weight: 600;
+              color: var(--color-accent);
+              font-weight: 620;
             }
-            
+
             .el-input {
               flex: 1;
             }
           }
         }
-        
+
         .procedure-card {
           margin-bottom: 16px;
-          
+
           .procedure-header {
             display: flex;
             align-items: center;
             gap: 12px;
-            
+
             .stage-input {
               flex: 1;
-              
+
               :deep(.el-input__inner) {
-                font-weight: 600;
+                font-weight: 620;
               }
             }
           }
-          
+
           .procedure-content {
             .form-group {
               margin-bottom: 16px;
-              
+
               label {
                 display: block;
                 font-size: 14px;
-                color: #666;
+                color: var(--text-secondary);
                 margin-bottom: 8px;
               }
             }

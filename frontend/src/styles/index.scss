@@ -1,88 +1,292 @@
-// 全局样式
+:root {
+  color-scheme: light;
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --radius-xs: 8px;
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 20px;
+  --space-1: 8px;
+  --space-2: 12px;
+  --space-3: 16px;
+  --space-4: 20px;
+  --space-5: 24px;
+  --space-6: 28px;
 
-// 滚动条样式
+  --color-primary: #2b3037;
+  --color-primary-hover: #3a4048;
+  --color-primary-active: #1f2328;
+  --primary-contrast: #f6f3ed;
+  --color-accent: #bb9459;
+
+  --bg-base: #f5f3ee;
+  --bg-canvas: #faf8f4;
+  --surface-1: #ffffff;
+  --surface-2: #f2efe8;
+  --surface-3: #ebe6dc;
+  --border-color: #ddd7cd;
+  --border-color-strong: #cfc5b6;
+
+  --text-primary: #1f2328;
+  --text-secondary: #5a616b;
+  --text-tertiary: #808895;
+  --text-on-primary: #f6f3ed;
+
+  --shadow-xs: 0 2px 6px rgba(33, 34, 37, 0.05);
+  --shadow-sm: 0 6px 18px rgba(33, 34, 37, 0.07);
+  --shadow-md: 0 12px 28px rgba(33, 34, 37, 0.1);
+
+  --el-color-primary: var(--color-primary);
+  --el-bg-color: var(--surface-1);
+  --el-bg-color-page: var(--bg-base);
+  --el-text-color-primary: var(--text-primary);
+  --el-text-color-regular: var(--text-secondary);
+  --el-text-color-secondary: var(--text-tertiary);
+  --el-border-color: var(--border-color);
+  --el-border-color-light: var(--border-color);
+  --el-fill-color-light: var(--surface-2);
+  --el-fill-color-lighter: var(--bg-canvas);
+  --el-border-radius-base: var(--radius-sm);
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --color-primary: #c6a169;
+  --color-primary-hover: #d7b584;
+  --color-primary-active: #b28d57;
+  --primary-contrast: #17140f;
+  --color-accent: #dcc18c;
+
+  --bg-base: #13161a;
+  --bg-canvas: #1a1f25;
+  --surface-1: #1f252d;
+  --surface-2: #242d37;
+  --surface-3: #2c3641;
+  --border-color: #364250;
+  --border-color-strong: #4c5a6a;
+
+  --text-primary: #edf1f8;
+  --text-secondary: #c3ceda;
+  --text-tertiary: #96a4b5;
+  --text-on-primary: #17140f;
+
+  --shadow-xs: 0 2px 8px rgba(0, 0, 0, 0.25);
+  --shadow-sm: 0 10px 24px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 16px 34px rgba(0, 0, 0, 0.36);
+
+  --el-color-primary: var(--color-primary);
+  --el-bg-color: var(--surface-1);
+  --el-bg-color-page: var(--bg-base);
+  --el-text-color-primary: var(--text-primary);
+  --el-text-color-regular: var(--text-secondary);
+  --el-text-color-secondary: var(--text-tertiary);
+  --el-border-color: var(--border-color);
+  --el-border-color-light: var(--border-color);
+  --el-fill-color-light: var(--surface-2);
+  --el-fill-color-lighter: var(--surface-3);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  width: 100%;
+  min-height: 100%;
+}
+
+body {
+  font-family: var(--font-family);
+  color: var(--text-primary);
+  background-color: var(--bg-base);
+  background-image: radial-gradient(circle at 0% 0%, rgba(187, 148, 89, 0.09), transparent 26%),
+    radial-gradient(circle at 100% 100%, rgba(43, 48, 55, 0.08), transparent 32%);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 4px;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+  background-color: color-mix(in srgb, var(--text-tertiary) 35%, transparent);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+  background-color: color-mix(in srgb, var(--text-tertiary) 55%, transparent);
 }
 
-// 通用卡片样式
-.card-header {
+.page-view {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-height: 100%;
+}
+
+.surface-card {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+  box-shadow: var(--shadow-sm);
+}
+
+.section-title {
+  margin: 0;
+  font-size: 18px;
   font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--text-primary);
 }
 
-// 页面容器
-.page-container {
-  padding: 20px;
+.section-subtitle {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--text-secondary);
 }
 
-// 表格操作按钮
-.table-actions {
-  .el-button {
-    padding: 4px 8px;
-  }
+.el-card {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-xs);
+  background: var(--surface-1);
 }
 
-// 状态标签
-.status-tag {
-  &.pending {
-    background: #e6f7ff;
-    color: #1890ff;
-  }
-  
-  &.processing {
-    background: #fff7e6;
-    color: #fa8c16;
-  }
-  
-  &.completed {
-    background: #f6ffed;
-    color: #52c41a;
-  }
+.el-card .el-card__header {
+  border-bottom: 1px solid var(--border-color);
+  padding: 14px 18px;
 }
 
-// 动画
+.el-card .el-card__body {
+  padding: 18px;
+}
+
+.el-divider {
+  border-color: var(--border-color);
+}
+
+.el-input__wrapper,
+.el-select__wrapper,
+.el-textarea__inner,
+.el-input-number,
+.el-radio-button__inner,
+.el-checkbox__inner {
+  border-radius: var(--radius-sm);
+}
+
+.el-input__wrapper,
+.el-select__wrapper,
+.el-input-number,
+.el-textarea__inner,
+.el-upload-dragger {
+  border: 1px solid var(--border-color);
+  box-shadow: none;
+  background: var(--surface-1);
+}
+
+.el-input__wrapper:hover,
+.el-select__wrapper:hover,
+.el-input-number:hover,
+.el-textarea__inner:hover,
+.el-upload-dragger:hover {
+  border-color: var(--border-color-strong);
+}
+
+.el-input__wrapper.is-focus,
+.el-select__wrapper.is-focused,
+.el-textarea__inner:focus,
+.el-input-number.is-focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 20%, transparent);
+}
+
+.el-button {
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.el-button--default {
+  border-color: var(--border-color);
+  background: var(--surface-1);
+  color: var(--text-primary);
+}
+
+.el-button--default:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  background: var(--surface-1);
+}
+
+.el-button--primary {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--primary-contrast);
+}
+
+.el-button--primary:hover,
+.el-button--primary:focus {
+  border-color: var(--color-primary-hover);
+  background: var(--color-primary-hover);
+  color: var(--primary-contrast);
+}
+
+.el-button--primary:active {
+  border-color: var(--color-primary-active);
+  background: var(--color-primary-active);
+}
+
+.el-table {
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  --el-table-border-color: var(--border-color);
+  --el-table-header-bg-color: var(--surface-2);
+  --el-table-tr-bg-color: var(--surface-1);
+  --el-table-row-hover-bg-color: var(--surface-2);
+  --el-table-text-color: var(--text-primary);
+  --el-table-header-text-color: var(--text-secondary);
+}
+
+.el-tag {
+  border-radius: 999px;
+}
+
+.el-menu {
+  border-right: none;
+}
+
+.el-dropdown-menu {
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: var(--surface-1);
+}
+
+.el-message-box,
+.el-dialog {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.3s ease;
+  transition: opacity 0.2s ease;
 }
 
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
-}
-
-.slide-up-enter-active,
-.slide-up-leave-active {
-  transition: all 0.3s ease;
-}
-
-.slide-up-enter-from,
-.slide-up-leave-to {
-  opacity: 0;
-  transform: translateY(20px);
-}
-
-// 响应式
-@media (max-width: 768px) {
-  .el-col {
-    width: 100% !important;
-    margin-bottom: 16px;
-  }
 }

@@ -38,6 +38,12 @@ const router = createRouter({
           name: 'RagWorkbench',
           component: () => import('../views/RagWorkbench.vue'),
           meta: { title: 'RAG 知识库', icon: 'FolderOpened' }
+        },
+        {
+          path: 'question-generator',
+          name: 'QuestionGenerator',
+          component: () => import('../views/QuestionGenerator.vue'),
+          meta: { title: '智能出题', icon: 'EditPen' }
         }
       ]
     }

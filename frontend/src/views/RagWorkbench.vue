@@ -1,8 +1,8 @@
 <template>
-  <div class="rag-workbench">
+  <div class="rag-workbench page-view">
     <el-row :gutter="20">
       <el-col :span="8">
-        <el-card shadow="hover">
+        <el-card shadow="hover" class="builder-card">
           <template #header>
             <div class="card-header">RAG 建库</div>
           </template>
@@ -32,7 +32,7 @@
               <el-input-number v-model="chunkOverlap" :min="0" :max="1000" :step="50" />
             </el-form-item>
 
-            <el-button type="success" :loading="indexing" @click="handleIndexFile" style="width: 100%">
+            <el-button type="primary" :loading="indexing" @click="handleIndexFile" style="width: 100%">
               {{ indexing ? '建库中...' : '上传并建立索引' }}
             </el-button>
           </el-form>
@@ -53,7 +53,7 @@
       </el-col>
 
       <el-col :span="16">
-        <el-card shadow="hover">
+        <el-card shadow="hover" class="library-card">
           <template #header>
             <div class="card-header actions">
               <span>RAG 库列表</span>
@@ -149,14 +149,41 @@ onMounted(() => {
 
 <style scoped lang="scss">
 .rag-workbench {
+  :deep(.el-row) {
+    flex-wrap: nowrap;
+  }
+
   .card-header {
-    font-weight: 600;
+    font-weight: 620;
+    color: var(--text-primary);
 
     &.actions {
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
+  }
+
+  .builder-card,
+  .library-card {
+    border-radius: 16px;
+  }
+
+  :deep(.el-alert) {
+    border-radius: 12px;
+  }
+
+  :deep(.el-upload) {
+    width: 100%;
+  }
+
+  :deep(.el-upload .el-button) {
+    width: 100%;
+  }
+
+  :deep(.el-form-item__label) {
+    font-weight: 520;
+    color: var(--text-secondary);
   }
 }
 </style>

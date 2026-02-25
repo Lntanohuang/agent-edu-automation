@@ -10,6 +10,14 @@ import './styles/index.scss'
 
 import App from './App.vue'
 
+const THEME_KEY = 'ui-theme-mode'
+
+function setupInitialTheme(): void {
+  const savedTheme = localStorage.getItem(THEME_KEY)
+  const initialTheme = savedTheme === 'dark' ? 'dark' : 'light'
+  document.documentElement.setAttribute('data-theme', initialTheme)
+}
+
 const AUTO_LOGIN = import.meta.env.VITE_AUTO_LOGIN === 'true'
 const DEFAULT_USERNAME = import.meta.env.VITE_DEFAULT_USERNAME || 'teacher001'
 const DEFAULT_PASSWORD = import.meta.env.VITE_DEFAULT_PASSWORD || 'teacher123'
@@ -33,6 +41,7 @@ async function ensureAuth(): Promise<void> {
 }
 
 async function bootstrap(): Promise<void> {
+  setupInitialTheme()
   await ensureAuth()
 
   const app = createApp(App)

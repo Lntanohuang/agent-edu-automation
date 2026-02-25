@@ -75,6 +75,95 @@ export interface PlanAgentGenerateData {
   semesterPlan: Record<string, unknown>
 }
 
+export interface QuestionGeneratePayload {
+  subject: string
+  topic?: string
+  textbookScope?: string[]
+  questionCount?: number
+  questionTypes?: string[]
+  difficultyDistribution?: {
+    easy: number
+    medium: number
+    hard: number
+  }
+  outputMode?: 'practice' | 'paper'
+  totalScore?: number
+  includeAnswer?: boolean
+  includeExplanation?: boolean
+  requireSourceCitation?: boolean
+}
+
+export interface QuestionGenerateData {
+  draftId: number
+  reviewStatus: string
+  message: string
+  generationMode: string
+  questionCount: number
+  questionSet: Record<string, unknown>
+  bookLabels: string[]
+  sources: string[]
+  validationNotes: string[]
+}
+
+export interface QuestionDraftSummary {
+  draftId: number
+  title: string
+  subject: string
+  topic: string
+  generationMode: string
+  questionCount: number
+  totalScore: number
+  reviewStatus: string
+  importedCount: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface QuestionDraftDetail extends QuestionDraftSummary {
+  textbookScope: string[]
+  reviewNote: string | null
+  questionSet: {
+    title?: string
+    questions?: Array<Record<string, unknown>>
+    total_score?: number
+    question_count?: number
+    output_mode?: string
+  }
+  bookLabels: string[]
+  sources: string[]
+  validationNotes: string[]
+}
+
+export interface QuestionReviewPayload {
+  action: 'approve' | 'reject'
+  reviewNote?: string
+  editedQuestionSet?: Record<string, unknown>
+}
+
+export interface QuestionReviewData {
+  draftId: number
+  reviewStatus: string
+  importedCount: number
+  message: string
+}
+
+export interface QuestionBankItem {
+  id: number
+  draftId: number
+  subject: string
+  questionType: string
+  difficulty: string
+  stem: string
+  options: string[]
+  answer: string
+  explanation: string
+  knowledgePoints: string[]
+  sourceCitations: Array<Record<string, unknown>>
+  score: number
+  status: string
+  createdAt: string
+}
+
 export interface ChatMessagePayload {
   message: string
   conversationId?: number
@@ -244,6 +333,27 @@ export const authApi = {
 export const lessonPlanApi = {
   generate: (params: PlanAgentGeneratePayload) =>
     api.post<unknown, ApiResult<PlanAgentGenerateData>>('/plan-agent/generate', params)
+}
+
+export const questionBankApi = {
+  generate: (params: QuestionGeneratePayload) =>
+    api.post<unknown, ApiResult<QuestionGenerateData>>('/question-bank/generate', params),
+
+  listDrafts: (page = 1, size = 20) =>
+    api.get<unknown, ApiResult<SpringPage<QuestionDraftSummary>>>('/question-bank/drafts', {
+      params: { page, size }
+    }),
+
+  getDraftDetail: (draftId: number) =>
+    api.get<unknown, ApiResult<QuestionDraftDetail>>(`/question-bank/drafts/${draftId}`),
+
+  reviewDraft: (draftId: number, params: QuestionReviewPayload) =>
+    api.post<unknown, ApiResult<QuestionReviewData>>(`/question-bank/drafts/${draftId}/review`, params),
+
+  listItems: (page = 1, size = 20) =>
+    api.get<unknown, ApiResult<SpringPage<QuestionBankItem>>>('/question-bank/items', {
+      params: { page, size }
+    })
 }
 
 // 智能问答 API
