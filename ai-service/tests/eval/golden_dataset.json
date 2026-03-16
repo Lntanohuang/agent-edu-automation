@@ -1,0 +1,261 @@
+[
+  {
+    "id": "law_001",
+    "query": "劳动合同法第47条规定了什么",
+    "intent": "law_article",
+    "difficulty": "easy",
+    "expected_keywords": ["经济补偿", "工作年限", "四十七条"],
+    "relevant_snippets": [
+      "第四十七条 经济补偿按劳动者在本单位工作的年限，每满一年支付一个月工资",
+      "六个月以上不满一年的，按一年计算；不满六个月的，向劳动者支付半个月工资"
+    ],
+    "reference_answer": "劳动合同法第47条规定经济补偿金按工作年限计算，每满1年支付1个月工资。",
+    "notes": "规则召回+BM25应显著优于纯向量"
+  },
+  {
+    "id": "law_002",
+    "query": "《劳动合同法》第39条用人单位单方解除劳动合同的情形",
+    "intent": "law_article",
+    "difficulty": "medium",
+    "expected_keywords": ["严重违反", "规章制度", "三十九条", "单方解除"],
+    "relevant_snippets": [
+      "第三十九条 劳动者有下列情形之一的，用人单位可以解除劳动合同",
+      "严重违反用人单位的规章制度的"
+    ],
+    "reference_answer": "劳动合同法第39条规定，劳动者严重违反规章制度等情形下，用人单位可单方解除劳动合同。",
+    "notes": "法律名+条号精确匹配"
+  },
+  {
+    "id": "law_003",
+    "query": "劳动法第44条加班工资怎么算",
+    "intent": "law_article",
+    "difficulty": "easy",
+    "expected_keywords": ["加班", "工资", "四十四条", "150%", "200%", "300%"],
+    "relevant_snippets": [
+      "第四十四条 有下列情形之一的，用人单位应当按照下列标准支付高于劳动者正常工作时间工资的工资报酬",
+      "安排劳动者延长工作时间的，支付不低于工资的百分之一百五十的工资报酬"
+    ],
+    "reference_answer": "劳动法第44条规定加班工资：平时延时不低于150%，休息日不低于200%，法定节假日不低于300%。",
+    "notes": "法律名+条号精确匹配"
+  },
+  {
+    "id": "law_004",
+    "query": "《社会保险法》第58条用人单位缴纳社保义务",
+    "intent": "law_article",
+    "difficulty": "medium",
+    "expected_keywords": ["社会保险", "用人单位", "五十八条", "登记", "缴纳"],
+    "relevant_snippets": [
+      "第五十八条 用人单位应当自用工之日起三十日内为其职工向社会保险经办机构申请办理社会保险登记",
+      "未办理社会保险登记的，由社会保险经办机构核定其应当缴纳的社会保险费"
+    ],
+    "reference_answer": "社会保险法第58条规定，用人单位应在用工之日起30日内为职工申请办理社会保险登记。",
+    "notes": "法律名+条号精确匹配"
+  },
+  {
+    "id": "law_005",
+    "query": "第96条规定的内容",
+    "intent": "law_article",
+    "difficulty": "hard",
+    "expected_keywords": ["九十六条"],
+    "relevant_snippets": [
+      "第九十六条"
+    ],
+    "reference_answer": "第96条具体内容取决于所属法律，需结合语境判断。",
+    "notes": "仅条号无法律名，意图仍为law_article"
+  },
+  {
+    "id": "law_006",
+    "query": "第82条劳动合同未签书面合同双倍工资",
+    "intent": "law_article",
+    "difficulty": "easy",
+    "expected_keywords": ["书面劳动合同", "双倍工资", "八十二条"],
+    "relevant_snippets": [
+      "第八十二条 用人单位自用工之日起超过一个月不满一年未与劳动者订立书面劳动合同的",
+      "应当向劳动者每月支付二倍的工资"
+    ],
+    "reference_answer": "劳动合同法第82条规定，用工超过1个月未签书面劳动合同，应支付双倍工资。",
+    "notes": "仅条号无明确法律名"
+  },
+  {
+    "id": "law_007",
+    "query": "劳动合同法关于试用期的规定有哪些",
+    "intent": "law_article",
+    "difficulty": "medium",
+    "expected_keywords": ["试用期", "劳动合同"],
+    "relevant_snippets": [
+      "劳动合同期限三个月以上不满一年的，试用期不得超过一个月",
+      "同一用人单位与同一劳动者只能约定一次试用期"
+    ],
+    "reference_answer": "劳动合同法规定试用期按合同期限设定上限，同一劳动者同一单位只能约定一次试用期。",
+    "notes": "仅法律名无条号，低优先级规则召回"
+  },
+  {
+    "id": "law_008",
+    "query": "劳动争议调解仲裁法有哪些主要规定",
+    "intent": "law_article",
+    "difficulty": "hard",
+    "expected_keywords": ["劳动争议", "调解", "仲裁", "时效"],
+    "relevant_snippets": [
+      "劳动争议申请仲裁的时效期间为一年",
+      "仲裁时效期间从当事人知道或者应当知道其权利被侵害之日起计算"
+    ],
+    "reference_answer": "劳动争议调解仲裁法规定仲裁时效为1年，从当事人知道权利被侵害之日起计算。",
+    "notes": "仅法律名无条号，开放性查询"
+  },
+  {
+    "id": "case_001",
+    "query": "(2024)京01民终123号劳动合同纠纷案",
+    "intent": "case_lookup",
+    "difficulty": "easy",
+    "expected_keywords": ["劳动合同", "纠纷", "北京"],
+    "relevant_snippets": [
+      "(2024)京01民终123号",
+      "劳动合同纠纷"
+    ],
+    "reference_answer": "该案为2024年北京市第一中级人民法院审理的劳动合同纠纷终审案件。",
+    "notes": "标准案号格式，BM25精确匹配优势显著"
+  },
+  {
+    "id": "case_002",
+    "query": "(2023)沪01民终456号案件判决结果",
+    "intent": "case_lookup",
+    "difficulty": "medium",
+    "expected_keywords": ["上海", "民事", "判决"],
+    "relevant_snippets": [
+      "(2023)沪01民终456号",
+      "判决书"
+    ],
+    "reference_answer": "该案为2023年上海市第一中级人民法院审理的民事终审案件。",
+    "notes": "案号匹配+判决查询"
+  },
+  {
+    "id": "case_003",
+    "query": "(2022)粤03民终789号劳动报酬纠纷",
+    "intent": "case_lookup",
+    "difficulty": "medium",
+    "expected_keywords": ["广东", "劳动报酬", "纠纷"],
+    "relevant_snippets": [
+      "(2022)粤03民终789号",
+      "劳动报酬纠纷"
+    ],
+    "reference_answer": "该案为2022年广东省中级人民法院审理的劳动报酬纠纷终审案件。",
+    "notes": "案号检索"
+  },
+  {
+    "id": "case_004",
+    "query": "(2021)苏05民终321号工伤赔偿案件如何处理",
+    "intent": "case_lookup",
+    "difficulty": "hard",
+    "expected_keywords": ["工伤", "赔偿", "江苏"],
+    "relevant_snippets": [
+      "(2021)苏05民终321号",
+      "工伤赔偿"
+    ],
+    "reference_answer": "该案为2021年江苏省中级人民法院审理的工伤赔偿纠纷终审案件。",
+    "notes": "案号检索+处理方式询问"
+  },
+  {
+    "id": "concept_001",
+    "query": "经济补偿金是什么意思",
+    "intent": "concept_explain",
+    "difficulty": "easy",
+    "expected_keywords": ["经济补偿", "解除", "劳动合同", "工资"],
+    "relevant_snippets": [
+      "经济补偿是用人单位解除或终止劳动合同时，依法给予劳动者的补偿",
+      "经济补偿金按劳动者在本单位工作的年限计算"
+    ],
+    "reference_answer": "经济补偿金是用人单位解除或终止劳动合同时依法支付给劳动者的补偿金，按工作年限计算。",
+    "notes": "概念解释，向量检索应表现良好"
+  },
+  {
+    "id": "concept_002",
+    "query": "劳动合同解除的概念和法律后果",
+    "intent": "concept_explain",
+    "difficulty": "medium",
+    "expected_keywords": ["劳动合同", "解除", "法律后果", "补偿"],
+    "relevant_snippets": [
+      "劳动合同的解除是指劳动合同订立后，尚未全部履行前，由于某种原因导致劳动合同一方或双方当事人提前消灭劳动关系的法律行为",
+      "解除劳动合同应当给予劳动者经济补偿"
+    ],
+    "reference_answer": "劳动合同解除是提前终止劳动合同关系的行为，依照解除原因不同，可能产生支付经济补偿等法律后果。",
+    "notes": "概念+法律后果双重询问"
+  },
+  {
+    "id": "concept_003",
+    "query": "用人单位有哪些缴纳社会保险的义务",
+    "intent": "concept_explain",
+    "difficulty": "easy",
+    "expected_keywords": ["社会保险", "用人单位", "缴纳", "义务", "职工"],
+    "relevant_snippets": [
+      "用人单位应当按时足额缴纳社会保险费",
+      "用人单位和劳动者必须依法参加社会保险，缴纳社会保险费"
+    ],
+    "reference_answer": "用人单位有义务为职工及时足额缴纳养老、医疗、失业、工伤和生育五类社会保险费。",
+    "notes": "义务性概念查询"
+  },
+  {
+    "id": "concept_004",
+    "query": "竞业限制协议的法律效力和范围",
+    "intent": "concept_explain",
+    "difficulty": "hard",
+    "expected_keywords": ["竞业限制", "保密", "补偿", "两年", "效力"],
+    "relevant_snippets": [
+      "竞业限制的人员限于用人单位的高级管理人员、高级技术人员和其他负有保密义务的人员",
+      "竞业限制期限不得超过两年"
+    ],
+    "reference_answer": "竞业限制协议适用于高管、技术人员等保密人员，期限最长2年，用人单位需支付相应补偿。",
+    "notes": "较复杂概念，需结合多条规定"
+  },
+  {
+    "id": "concept_005",
+    "query": "试用期的工资待遇有什么规定",
+    "intent": "concept_explain",
+    "difficulty": "medium",
+    "expected_keywords": ["试用期", "工资", "不得低于", "80%"],
+    "relevant_snippets": [
+      "劳动者在试用期的工资不得低于本单位相同岗位最低档工资或者劳动合同约定工资的百分之八十",
+      "并不得低于用人单位所在地的最低工资标准"
+    ],
+    "reference_answer": "试用期工资不得低于同岗位最低档工资或合同约定工资的80%，且不低于当地最低工资标准。",
+    "notes": "试用期工资概念查询"
+  },
+  {
+    "id": "general_001",
+    "query": "劳动者在工作中受到伤害应该怎么办",
+    "intent": "general",
+    "difficulty": "medium",
+    "expected_keywords": ["工伤", "认定", "申请", "赔偿"],
+    "relevant_snippets": [
+      "职工发生工伤，与用人单位存在劳动关系的，可以申请工伤认定",
+      "工伤认定申请应在事故发生之日起一年内提出"
+    ],
+    "reference_answer": "劳动者工作中受伤应及时申请工伤认定，在事故发生后1年内向劳动行政部门申请，认定后可享受工伤保险待遇。",
+    "notes": "开放性问题，向量检索为主"
+  },
+  {
+    "id": "general_002",
+    "query": "拖欠工资不发如何维权",
+    "intent": "general",
+    "difficulty": "easy",
+    "expected_keywords": ["工资", "投诉", "劳动监察", "仲裁", "维权"],
+    "relevant_snippets": [
+      "劳动者可以向劳动行政部门举报，由劳动行政部门责令用人单位支付工资",
+      "劳动者也可以申请劳动仲裁，要求用人单位支付拖欠工资及赔偿金"
+    ],
+    "reference_answer": "拖欠工资可向劳动监察大队投诉，或申请劳动仲裁，也可直接向法院提起诉讼。",
+    "notes": "维权流程开放性问题"
+  },
+  {
+    "id": "general_003",
+    "query": "签劳动合同需要注意哪些重要条款",
+    "intent": "general",
+    "difficulty": "medium",
+    "expected_keywords": ["劳动合同", "条款", "工资", "工作内容", "期限"],
+    "relevant_snippets": [
+      "劳动合同应当具备劳动合同期限、工作内容和工作地点、工作时间和休息休假、劳动报酬等条款",
+      "劳动合同由用人单位与劳动者协商一致，并经用人单位与劳动者在劳动合同文本上签字或者盖章生效"
+    ],
+    "reference_answer": "签劳动合同需注意：合同期限、工作内容与地点、工作时间、劳动报酬、社会保险、试用期等必备条款。",
+    "notes": "开放性建议类问题"
+  }
+]

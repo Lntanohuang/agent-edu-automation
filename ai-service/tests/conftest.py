@@ -68,6 +68,18 @@ def mock_vector_store():
         yield vs
 
 
+# ── Mock Hybrid Retriever ──
+
+@pytest.fixture()
+def mock_hybrid_retriever():
+    """Patch the HybridRetriever singleton for tests that use hybrid retrieval."""
+    hr = MagicMock(name="mock_hybrid_retriever")
+    hr.retrieve.return_value = []
+    hr.invalidate.return_value = None
+    with patch("app.retrieval.hybrid_retriever.get_hybrid_retriever", return_value=hr):
+        yield hr
+
+
 # ── Async HTTP client for FastAPI app ──
 
 @pytest_asyncio.fixture()
