@@ -41,12 +41,17 @@ class Settings(BaseSettings):
     azure_openai_endpoint: Optional[str] = Field(default=None, description="Azure OpenAI Endpoint")
     azure_openai_deployment: Optional[str] = Field(default=None, description="Azure OpenAI Deployment")
 
+    # 聊天模型配置
+    chat_provider: str = Field(default="ollama", description="聊天模型提供方：ollama 或 mlx")
+
     # Ollama 配置
     ollama_base_url: str = Field(default="http://127.0.0.1:11434", description="Ollama Base URL")
     ollama_api_key: Optional[str] = Field(default=None, description="Ollama API Key（如不需要可为空）")
     ollama_embedding_model: str = Field(default="qwen3-embedding:4b", description="Ollama Embedding 模型")
     ollama_qwen_model: str = Field(default="qwen2.5:7b-instruct", description="Ollama Qwen 聊天模型")
     ollama_qwen_url: Optional[str] = Field(default=None, description="Ollama Qwen 服务地址（为空则使用 ollama_base_url）")
+    mlx_model_path: Optional[str] = Field(default=None, description="MLX 本地聊天模型目录")
+    mlx_max_tokens: int = Field(default=2000, ge=1, le=8192, description="MLX 生成最大 token 数")
     
     # 向量数据库配置
     chroma_persist_directory: str = Field(default="./chroma_db", description="ChromaDB 持久化目录")

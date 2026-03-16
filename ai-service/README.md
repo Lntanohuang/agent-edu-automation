@@ -1,6 +1,7 @@
 # 智能教育平台 - AI 服务
 
 基于 FastAPI + LangChain 的 AI 服务，提供智能问答、教案生成、作业批阅等功能。
+聊天模型支持 `Ollama` 和本地 `mlx_lm` 两种后端，RAG embedding 仍通过 Ollama 提供。
 
 ## 技术栈
 
@@ -24,7 +25,28 @@ pip install -r requirements.txt
 
 ```bash
 cp .env.example .env
-# 编辑 .env，填入你的 OpenAI API Key
+# 编辑 .env
+```
+
+使用 Ollama：
+
+```env
+OPENAI_API_KEY=dummy
+CHAT_PROVIDER=ollama
+OLLAMA_BASE_URL=http://127.0.0.1:11434
+OLLAMA_QWEN_MODEL=qwen2.5:7b-instruct
+OLLAMA_EMBEDDING_MODEL=qwen3-embedding:4b
+```
+
+使用本地 MLX 模型：
+
+```env
+OPENAI_API_KEY=dummy
+CHAT_PROVIDER=mlx
+MLX_MODEL_PATH=/Users/erichuang/微调/output/merged_model
+MLX_MAX_TOKENS=2000
+OLLAMA_BASE_URL=http://127.0.0.1:11434
+OLLAMA_EMBEDDING_MODEL=qwen3-embedding:4b
 ```
 
 ### 3. 启动服务

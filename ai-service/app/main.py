@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 
 from app.core.config import settings
 from app.core.logging import get_logger, setup_logging
-from app.routers import rag, plan_agent
+from app.routers import rag, plan_agent, question_generation
 
 # 设置日志
 setup_logging()
@@ -54,13 +54,16 @@ async def health_check():
     return {
         "status": "healthy",
         "version": settings.app_version,
-        "model": settings.openai_model,
+        "chat_provider": settings.chat_provider,
+        "chat_model": settings.mlx_model_path if settings.chat_provider == "mlx" else settings.ollama_qwen_model,
+        "embedding_model": settings.ollama_embedding_model,
     }
 
 
 # 注册路由
 app.include_router(rag.router, prefix="/rag", tags=["RAG"])
 app.include_router(plan_agent.router, prefix="/plan-agent", tags=["教案Agent"])
+app.include_router(question_generation.router, prefix="/question-gen", tags=["智能出题"])
 
 
 @app.on_event("startup")
@@ -70,7 +73,9 @@ async def startup_event():
         "AI Service started",
         app_name=settings.app_name,
         version=settings.app_version,
-        model=settings.openai_model,
+        chat_provider=settings.chat_provider,
+        chat_model=settings.mlx_model_path if settings.chat_provider == "mlx" else settings.ollama_qwen_model,
+        embedding_model=settings.ollama_embedding_model,
     )
 
 

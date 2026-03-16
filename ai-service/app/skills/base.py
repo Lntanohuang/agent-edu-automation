@@ -1,12 +1,21 @@
-"""Skills 基础抽象与通用工具方法。"""
+"""Skills 通用工具方法与声明式技能 Runner。"""
 
-from abc import ABC, abstractmethod
+from __future__ import annotations
+
 from pathlib import Path
-from typing import List
+from typing import TYPE_CHECKING, List
 
 from langchain_core.documents import Document
+from langchain_core.messages import HumanMessage, SystemMessage
 
+from app.llm.model_factory import chat_llm
 from app.skills.schemas import SkillResponse
+
+if TYPE_CHECKING:
+    from app.skills.skill_config import SkillConfig
+
+
+# ── 工具函数（保持不变） ─────────────────────────────────────
 
 
 def resolve_book_label(metadata: dict) -> str:
@@ -70,17 +79,53 @@ def build_context_text(docs: List[Document], *, max_docs: int = 4, max_chars: in
     return "\n".join(chunks).strip()
 
 
-class SkillBase(ABC):
-    """所有技能的统一接口。"""
+# ── 通用 Skill Runner ───────────────────────────────────────
 
-    name: str = "base"
 
-    @abstractmethod
-    def can_handle(self, query: str) -> bool:
-        """判断当前技能是否适合处理该问题。"""
-        raise NotImplementedError
+class Skill:
+    """由 SkillConfig 驱动的通用技能执行器。
 
-    @abstractmethod
+    所有主技能共用此实现，不再需要各自定义 class。
+    """
+
+    def __init__(self, config: SkillConfig) -> None:
+        self.config = config
+        self.name = config.name
+
     async def run(self, query: str, retrieved_docs: List[Document]) -> SkillResponse:
-        """执行技能并返回统一结构结果。"""
-        raise NotImplementedError
+        """执行技能：构建上下文 → LLM 结构化输出 → 格式化 → 返回 SkillResponse。"""
+        context_text = build_context_text(retrieved_docs)
+
+        llm = chat_llm.with_structured_output(
+            self.config.output_schema, method="json_schema",
+        )
+        output = await llm.ainvoke([
+            SystemMessage(content=self.config.system_prompt),
+            HumanMessage(content=f"用户问题：{query}\n\n检索上下文：\n{context_text}\n\n请输出结构化结果。"),
+        ])
+
+        parsed = (
+            output
+            if isinstance(output, self.config.output_schema)
+            else self.config.output_schema.model_validate(output)
+        )
+
+        answer = self.config.format_answer(parsed)
+
+        tasks = getattr(parsed, "exploration_tasks", [])
+        tasks = tasks[:3] if tasks else self.config.default_tasks
+
+        confidence = (
+            self.config.confidence_with_docs if retrieved_docs
+            else self.config.confidence_without_docs
+        )
+
+        return SkillResponse(
+            skill_used=self.name,
+            answer=answer,
+            sources=build_sources(retrieved_docs),
+            book_labels=collect_book_labels(retrieved_docs),
+            exploration_tasks=tasks,
+            confidence=confidence,
+            structured_data=parsed.model_dump(),
+        )

@@ -1,11 +1,30 @@
+"""
+多技能编排教案生成 Agent。
+
+流程：检索教材 → 调用 skills 获取领域知识 → 综合生成完整学期教案。
+"""
+
+import asyncio
+import logging
 from typing import List
 
 from langchain_core.messages import HumanMessage, SystemMessage
-from app.llm.model_factory import ollama_qwen_llm
-from app.prompts.plan_prompts import lesson_plan_prompt
-from app.tools.rag_tool import retrieve_context
-
 from pydantic import BaseModel, Field
+
+from app.llm.model_factory import chat_llm
+from app.llm.vector_store import get_rag_vector_store
+from app.prompts.plan_prompts import lesson_plan_prompt
+from app.skills.registry import get_registered_skills
+
+logger = logging.getLogger(__name__)
+
+# Plan Agent 依赖的 skill 名称（按调用顺序）
+_PLAN_SKILLS = [
+    "curriculum_outline",
+    "knowledge_sequencing",
+    "teaching_activity",
+    "assessment_design",
+]
 
 
 class WeeklyPlan(BaseModel):
@@ -36,11 +55,15 @@ class SemesterPlanOutput(BaseModel):
     resource_plan: List[str] = Field(description="Semester teaching resource plan")
 
 
-class TwoStagePlanAgent:
+class SkillEnhancedPlanAgent:
     """
-    Two-stage plan agent:
-    1) Retrieve context by tool.
-    2) Generate structured output with model.with_structured_output.
+    多技能编排教案 Agent：
+
+    1. 检索教材文档
+    2. 依次调用 curriculum_outline / knowledge_sequencing /
+       teaching_activity / assessment_design skills
+    3. 将 skills 输出作为增强上下文注入最终 prompt
+    4. LLM 生成完整学期教案
     """
 
     async def ainvoke(self, inputs: dict) -> dict:
@@ -52,35 +75,62 @@ class TwoStagePlanAgent:
         if not user_query:
             raise ValueError("缺少用户输入")
 
-        tool_result = retrieve_context.invoke({"query": user_query})
-        if isinstance(tool_result, tuple):
-            context_text = str(tool_result[0] or "")
-        else:
-            context_text = str(tool_result or "")
+        # ── 1. 检索教材文档 ──
+        vector_store = get_rag_vector_store()
+        retrieved_docs = vector_store.similarity_search(user_query, k=8)
 
-        structured_llm = ollama_qwen_llm.with_structured_output(
+        # ── 2. 调用 skills 获取领域知识 ──
+        all_skills = get_registered_skills()
+        skill_insights: list[str] = []
+
+        async def _run_skill(name: str, skill, query: str, docs):
+            try:
+                result = await skill.run(query, docs)
+                logger.info("Plan Agent skill 调用成功: %s", name)
+                return name, result
+            except Exception:
+                logger.exception("Plan Agent skill 调用失败: %s", name)
+                return name, None
+
+        tasks = []
+        for skill_name in _PLAN_SKILLS:
+            skill = all_skills.get(skill_name)
+            if skill is None:
+                logger.warning("Plan Agent 所需技能未注册: %s", skill_name)
+                continue
+            tasks.append(_run_skill(skill_name, skill, user_query, retrieved_docs))
+
+        results = await asyncio.gather(*tasks)
+        for name, result in results:
+            if result:
+                skill_insights.append(f"=== {name} ===\n{result.answer}")
+
+        # ── 3. 组装增强 prompt ──
+        skills_context = "\n\n".join(skill_insights) if skill_insights else ""
+
+        enriched_query_parts = [user_query]
+        if skills_context:
+            enriched_query_parts.append(
+                f"以下是教学设计专家从教材中提取的参考信息，请据此生成更精准的教案：\n\n"
+                f"{skills_context}"
+            )
+        enriched_query_parts.append("请严格按结构化字段输出。")
+        enriched_query = "\n\n".join(enriched_query_parts)
+
+        # ── 4. 最终 LLM 生成 ──
+        structured_llm = chat_llm.with_structured_output(
             SemesterPlanOutput,
             method="json_schema",
         )
 
-        enriched_query = (
-            f"{user_query}\n\n"
-            f"可参考检索上下文：\n{context_text}\n\n"
-            "请严格按结构化字段输出。"
-        )
-
-        structured = await structured_llm.ainvoke(
-            [
-                SystemMessage(content=lesson_plan_prompt),
-                HumanMessage(content=enriched_query),
-            ]
-        )
+        structured = await structured_llm.ainvoke([
+            SystemMessage(content=lesson_plan_prompt),
+            HumanMessage(content=enriched_query),
+        ])
 
         return {"structured_response": structured}
 
 
 def create_plan_agent():
-    """
-    创建两段式教案生成 Agent（先检索，再结构化输出）。
-    """
-    return TwoStagePlanAgent()
+    """创建多技能编排教案生成 Agent。"""
+    return SkillEnhancedPlanAgent()

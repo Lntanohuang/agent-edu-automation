@@ -6,7 +6,7 @@ from langchain_core.documents import Document
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 
-from app.llm.model_factory import ollama_qwen_llm
+from app.llm.model_factory import chat_llm
 from app.skills.base import build_context_text, collect_book_labels
 
 
@@ -40,7 +40,7 @@ class TeachingTaskGeneratorSkill:
         labels = collect_book_labels(retrieved_docs)
         label_text = ", ".join(labels) if labels else "当前未识别书本标签"
 
-        llm = ollama_qwen_llm.with_structured_output(
+        llm = chat_llm.with_structured_output(
             TeachingTasksOutput,
             method="json_schema",
         )
@@ -50,8 +50,8 @@ class TeachingTaskGeneratorSkill:
                 [
                     SystemMessage(
                         content=(
-                            "你是法学课程助教。请为学生生成2-3条可执行的探索任务。"
-                            "任务必须引导学生回到教材或检索资料，不要空泛。"
+                            "你是课程助教。请根据问题所属学科领域，为学生生成2-3条可执行的探索任务。"
+                            "任务必须引导学生回到教材或检索资料，具体且有针对性，不要空泛。"
                         )
                     ),
                     HumanMessage(

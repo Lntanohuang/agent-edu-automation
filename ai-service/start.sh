@@ -25,6 +25,9 @@ if [ ! -f ".env" ]; then
     cp .env.example .env
 fi
 
+# 清除代理，避免 Ollama 请求走代理导致 503
+unset http_proxy HTTP_PROXY https_proxy HTTPS_PROXY all_proxy ALL_PROXY
+
 # 启动服务
 echo "启动服务..."
 echo "访问 http://localhost:8000/docs 查看 API 文档"

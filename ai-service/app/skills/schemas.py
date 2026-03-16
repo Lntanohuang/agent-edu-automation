@@ -1,6 +1,6 @@
 """Skills 统一输出数据结构。"""
 
-from typing import List
+from typing import Dict, List
 
 from pydantic import BaseModel, Field
 
@@ -14,3 +14,4 @@ class SkillResponse(BaseModel):
     book_labels: List[str] = Field(default_factory=list, description="Matched book labels")
     exploration_tasks: List[str] = Field(default_factory=list, description="Suggested exploration tasks")
     confidence: str = Field(default="medium", description="Confidence level")
+    structured_data: Dict = Field(default_factory=dict, description="Raw structured output from LLM")

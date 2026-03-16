@@ -8,7 +8,7 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, Tool
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.core.tracing import traceable
-from app.llm.model_factory import ollama_qwen_llm
+from app.llm.model_factory import chat_llm
 from app.llm.vector_store import get_rag_vector_store
 from app.memory.conversation_summary import (
     ConversationSummaryStore,
@@ -27,6 +27,7 @@ from app.skills.teaching_task_generator.skill import TeachingTaskGeneratorSkill
 
 logger = get_logger(__name__)
 SUMMARY_EVERY_USER_TURNS = 5
+_MAX_RETRY_ON_LOW_CONFIDENCE = 1
 
 
 @traceable(
@@ -53,10 +54,46 @@ async def _summarize_history_with_ai(
         f"新增对话：\n{unsummarized_history_text}\n\n"
         "请输出更新后的摘要。"
     )
-    response = await ollama_qwen_llm.ainvoke(
+    response = await chat_llm.ainvoke(
         [SystemMessage(content=prompt), HumanMessage(content=human_text)]
     )
     return message_content_to_text(getattr(response, "content", ""))
+
+
+@traceable(
+    run_type="llm",
+    name="RAG Answer Quality Self-Eval",
+    project_name=settings.langsmith_project_name,
+)
+async def _self_evaluate_answer(
+    query: str,
+    answer: str,
+    *,
+    langsmith_extra: dict | None = None,
+) -> str | None:
+    """用 LLM 自评回答质量，如果不完整则返回提示文本，否则返回 None。"""
+    try:
+        eval_prompt = (
+            "你是回答质量评审员。请判断以下回答是否充分回应了用户问题。\n"
+            "只输出一行：如果回答充分，输出'PASS'；如果不充分，输出简短原因（不超过30字）。"
+        )
+        response = await chat_llm.ainvoke([
+            SystemMessage(content=eval_prompt),
+            HumanMessage(content=f"用户问题：{query}\n\n回答：{answer}"),
+        ])
+        eval_text = message_content_to_text(getattr(response, "content", "")).strip()
+        if eval_text.upper().startswith("PASS"):
+            return None
+        return eval_text
+    except Exception as exc:
+        logger.warning("Answer self-evaluation failed", error=str(exc))
+        return None
+
+
+def _append_quality_note(skill_result, note: str):
+    """在 skill_result.answer 末尾追加质量提示。"""
+    skill_result.answer = f"{skill_result.answer}\n\n【自评提示】{note}"
+    return skill_result
 
 
 @traceable(
@@ -72,16 +109,47 @@ async def _run_rag_pipeline(
     source_audit_skill: SourceAuditSkill,
     teaching_task_skill: TeachingTaskGeneratorSkill,
 ) -> dict:
-    """执行 RAG 主链路：检索 -> 技能生成 -> 审计与任务补全。"""
+    """执行 RAG 主链路：检索 -> 技能生成 -> 审计（低置信度重试一次） -> 质量自评 -> 任务补全。"""
     vector_store = get_rag_vector_store()
     retrieval_query = query
     if history_text:
         retrieval_query = f"{query}\n\n历史上下文（精简）:\n{history_text}"
 
     retrieved_docs = vector_store.similarity_search(retrieval_query, k=6)
-    selected_skill = select_skill(query)
+    selected_skill = await select_skill(query)
     skill_query = query if not history_text else f"历史对话（精简）:\n{history_text}\n\n当前问题：{query}"
     skill_result = await selected_skill.run(skill_query, retrieved_docs)
+
+    audited = source_audit_skill.run(
+        answer=skill_result.answer,
+        sources=skill_result.sources,
+        retrieved_docs=retrieved_docs,
+    )
+
+    # ── P1: SourceAudit 反馈循环 — 低置信度时扩大检索重试一次 ──
+    if audited.confidence == "low":
+        logger.info("SourceAudit confidence=low, retrying with expanded retrieval (k=12)")
+        retry_docs = vector_store.similarity_search(query, k=12)
+        if retry_docs:
+            retry_result = await selected_skill.run(skill_query, retry_docs)
+            retry_audited = source_audit_skill.run(
+                answer=retry_result.answer,
+                sources=retry_result.sources,
+                retrieved_docs=retry_docs,
+            )
+            if retry_audited.confidence != "low":
+                skill_result = retry_result
+                audited = retry_audited
+                audited.source_notes.append("经扩大检索重试后置信度提升。")
+                retrieved_docs = retry_docs
+            else:
+                audited.source_notes.append("扩大检索重试后置信度仍为 low。")
+
+    # ── P1: 回答质量自评 ──
+    quality_note = await _self_evaluate_answer(query, skill_result.answer, langsmith_extra=langsmith_extra)
+    if quality_note:
+        skill_result = _append_quality_note(skill_result, quality_note)
+        audited.source_notes.append(f"质量自评: {quality_note}")
 
     generated_tasks = await teaching_task_skill.run(
         query=query,
@@ -89,13 +157,12 @@ async def _run_rag_pipeline(
         retrieved_docs=retrieved_docs,
         existing_tasks=skill_result.exploration_tasks,
     )
-    audited = source_audit_skill.run(
-        answer=skill_result.answer,
-        sources=skill_result.sources,
-        retrieved_docs=retrieved_docs,
-    )
 
     answer = audited.audited_answer
+    if quality_note:
+        answer = f"{skill_result.answer}"
+        if audited.confidence != "high":
+            answer = audited.audited_answer
     if skill_result.book_labels:
         answer = f"{answer}\n\n依据书本标签：{', '.join(skill_result.book_labels)}"
 
@@ -190,6 +257,7 @@ class RagChatService:
                             state.summary = new_summary
                             state.last_summarized_message_count = len(effective_history_messages)
                             state.last_summarized_user_turns = user_turn_count
+                            self.summary_store.persist(conversation_id, state)
                     except Exception as exc:
                         logger.warning(
                             "RAG history summarization failed",

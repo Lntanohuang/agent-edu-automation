@@ -17,12 +17,14 @@ from langchain_community.document_loaders import (
     UnstructuredWordDocumentLoader,
 )
 from langchain_core.documents import Document
-from langchain_ollama import OllamaEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from app.core.config import settings
+from app.llm.model_factory import ollama_embedding_model
 from app.core.logging import get_logger
 from app.models.schemas import KnowledgeSearchRequest
+from app.rag.frontmatter_parser import parse_frontmatter
+from app.rag.legal_splitter import split_legal_document
 
 logger = get_logger(__name__)
 
@@ -39,13 +41,7 @@ class KnowledgeService:
     }
     
     def __init__(self):
-        # 本地 Ollama embedding 配置（可通过环境变量覆盖）
-        ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
-        ollama_embedding_model = os.getenv("OLLAMA_EMBEDDING_MODEL", "qwen3-embedding:4b")
-        self.embeddings = OllamaEmbeddings(
-            model=ollama_embedding_model,
-            base_url=ollama_base_url,
-        )
+        self.embeddings = ollama_embedding_model
         
         # 确保目录存在
         os.makedirs(settings.chroma_persist_directory, exist_ok=True)
@@ -138,17 +134,38 @@ class KnowledgeService:
             }
 
         markdown_content = draft.get("markdown_content", "")
-        chunks = self.text_splitter.split_text(markdown_content)
+        fm_metadata, body = parse_frontmatter(markdown_content)
 
-        metadatas = [
-            {
+        if fm_metadata.get("doc_type") in ("statute", "interpretation", "case", "contract"):
+            # 法律文档：使用领域化切块
+            merged_meta = {
                 "doc_id": draft["document_id"],
-                "chunk_index": index,
                 "filename": draft["filename"],
                 **draft.get("metadata", {}),
+                **fm_metadata,
             }
-            for index in range(len(chunks))
-        ]
+            docs = split_legal_document(body, merged_meta)
+            chunks = [d.page_content for d in docs]
+            metadatas = []
+            for i, d in enumerate(docs):
+                meta = {**d.metadata, "chunk_index": i}
+                # ChromaDB 不支持 list 类型 metadata
+                for k, v in list(meta.items()):
+                    if isinstance(v, list):
+                        meta[k] = ", ".join(str(x) for x in v)
+                metadatas.append(meta)
+        else:
+            # 通用文档：使用通用切块
+            chunks = self.text_splitter.split_text(markdown_content)
+            metadatas = [
+                {
+                    "doc_id": draft["document_id"],
+                    "chunk_index": index,
+                    "filename": draft["filename"],
+                    **draft.get("metadata", {}),
+                }
+                for index in range(len(chunks))
+            ]
 
         self.vectorstore.add_texts(
             texts=chunks,
