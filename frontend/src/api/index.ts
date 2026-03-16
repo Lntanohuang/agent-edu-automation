@@ -396,4 +396,18 @@ export const ragAiApi = {
     aiApi.post<unknown, RagAgentChatData>('/rag/agent/chat', payload)
 }
 
+// 反馈 API
+export interface FeedbackPayload {
+  conversation_id: string
+  message_id: string
+  rating: 'helpful' | 'not_helpful'
+  comment?: string
+  confidence?: string
+}
+
+export const ragFeedbackApi = {
+  submit: (payload: FeedbackPayload) =>
+    aiApi.post<{ success: boolean; message: string }>('/feedback/', payload),
+}
+
 export default api

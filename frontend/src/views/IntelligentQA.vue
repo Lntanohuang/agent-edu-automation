@@ -76,6 +76,39 @@
               </div>
               <div class="message-content">
                 <div class="message-bubble" v-html="renderMarkdown(message.content)"></div>
+                <div v-if="message.role === 'assistant' && message.confidence"
+                     class="message-meta">
+                  <el-tag :type="confidenceType(message.confidence)" size="small">
+                    {{ confidenceLabel(message.confidence) }}
+                  </el-tag>
+                  <el-tag v-if="message.skillUsed" type="info" size="small">
+                    {{ message.skillUsed }}
+                  </el-tag>
+                </div>
+                <el-collapse v-if="message.sources && message.sources.length > 0" class="sources-collapse">
+                  <el-collapse-item title="查看来源">
+                    <ul class="sources-list">
+                      <li v-for="src in message.sources" :key="src">{{ src }}</li>
+                    </ul>
+                  </el-collapse-item>
+                </el-collapse>
+                <div class="feedback-row" v-if="message.role === 'assistant'">
+                  <span class="feedback-label">这个回答</span>
+                  <el-button
+                    text
+                    size="small"
+                    :type="feedbackState[message.id] === 'helpful' ? 'success' : ''"
+                    @click="submitFeedback(message, 'helpful')">
+                    👍 有用
+                  </el-button>
+                  <el-button
+                    text
+                    size="small"
+                    :type="feedbackState[message.id] === 'not_helpful' ? 'danger' : ''"
+                    @click="submitFeedback(message, 'not_helpful')">
+                    👎 无用
+                  </el-button>
+                </div>
                 <span class="message-time">{{ formatTime(message.timestamp) }}</span>
               </div>
             </div>
@@ -120,7 +153,9 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, watch, onMounted } from 'vue'
 import { useChatStore } from '../stores/chat'
+import type { Message } from '../stores/chat'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { ragFeedbackApi, type FeedbackPayload } from '../api/index'
 import {
   Plus,
   Delete,
@@ -137,6 +172,7 @@ const chatStore = useChatStore()
 const inputMessage = ref('')
 const loading = ref(false)
 const messageContainer = ref()
+const feedbackState = ref<Record<string, string>>({})
 
 const md = new MarkdownIt({
   html: false,
@@ -224,6 +260,30 @@ const clearMessages = () => {
   }).catch(() => {
     ElMessage.error('清空失败')
   })
+}
+
+const confidenceType = (c: string): '' | 'success' | 'warning' | 'danger' | 'info' =>
+  c === 'high' ? 'success' : c === 'medium' ? 'warning' : 'danger'
+
+const confidenceLabel = (c: string): string =>
+  ({ high: '高置信度', medium: '中等置信度', low: '低置信度' } as Record<string, string>)[c] ?? c
+
+const submitFeedback = async (message: Message, rating: 'helpful' | 'not_helpful') => {
+  if (feedbackState.value[message.id]) return
+  feedbackState.value[message.id] = rating
+  try {
+    const payload: FeedbackPayload = {
+      conversation_id: currentConversation.value?.id ?? '',
+      message_id: message.id,
+      rating,
+      confidence: message.confidence,
+    }
+    await ragFeedbackApi.submit(payload)
+    ElMessage.success('感谢您的反馈！')
+  } catch {
+    ElMessage.error('提交反馈失败')
+    delete feedbackState.value[message.id]
+  }
 }
 
 onMounted(async () => {
@@ -544,6 +604,41 @@ watch(() => currentConversation.value?.messages.length, scrollToBottom)
             .message-time {
               font-size: 12px;
               color: var(--text-tertiary);
+            }
+
+            .message-meta {
+              display: flex;
+              gap: 6px;
+              flex-wrap: wrap;
+              margin-top: 4px;
+            }
+
+            .sources-collapse {
+              margin-top: 6px;
+              font-size: 13px;
+            }
+
+            .sources-list {
+              padding-left: 18px;
+              margin: 4px 0;
+
+              li {
+                margin: 2px 0;
+              }
+            }
+
+            .feedback-row {
+              display: flex;
+              align-items: center;
+              gap: 6px;
+              margin-top: 6px;
+              padding-top: 6px;
+              border-top: 1px solid var(--border-color);
+
+              .feedback-label {
+                font-size: 12px;
+                color: var(--text-tertiary);
+              }
             }
           }
         }
