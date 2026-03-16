@@ -70,6 +70,12 @@ class Settings(BaseSettings):
     # 限流配置
     rate_limit_per_minute: int = Field(default=60, description="每分钟请求限制")
 
+    # 检索配置
+    retrieval_k_default: int = Field(default=6, description="默认检索 k 值")
+    retrieval_k_law_article: int = Field(default=4, description="法条查询检索 k 值")
+    retrieval_k_case_lookup: int = Field(default=8, description="案例查询检索 k 值")
+    retrieval_k_concept: int = Field(default=6, description="概念查询检索 k 值")
+
     # LangSmith 配置
     langsmith_project_name: str = Field(default="智能教育平台-AI-Service", description="LangSmith Project 名称")
 

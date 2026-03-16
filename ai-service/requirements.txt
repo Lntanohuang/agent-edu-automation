@@ -198,3 +198,7 @@ yarl @ file:///Users/runner/miniforge3/conda-bld/yarl_1761337051880/work
 zipp==3.23.0
 zope.interface==8.2
 zstandard==0.25.0
+
+# 混合检索依赖
+rank-bm25>=0.2.2
+jieba>=0.42.1

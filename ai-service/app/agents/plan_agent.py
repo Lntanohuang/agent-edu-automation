@@ -12,7 +12,8 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 
 from app.llm.model_factory import chat_llm
-from app.llm.vector_store import get_rag_vector_store
+from app.retrieval.query_analyzer import analyze_query
+from app.retrieval.hybrid_retriever import get_hybrid_retriever
 from app.prompts.plan_prompts import lesson_plan_prompt
 from app.skills.registry import get_registered_skills
 
@@ -75,9 +76,10 @@ class SkillEnhancedPlanAgent:
         if not user_query:
             raise ValueError("缺少用户输入")
 
-        # ── 1. 检索教材文档 ──
-        vector_store = get_rag_vector_store()
-        retrieved_docs = vector_store.similarity_search(user_query, k=8)
+        # ── 1. 检索教材文档（混合检索） ──
+        hybrid_retriever = get_hybrid_retriever()
+        analysis = analyze_query(user_query)
+        retrieved_docs = hybrid_retriever.retrieve(user_query, analysis, k=8)
 
         # ── 2. 调用 skills 获取领域知识 ──
         all_skills = get_registered_skills()

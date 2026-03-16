@@ -22,6 +22,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from app.core.config import settings
 from app.llm.model_factory import ollama_embedding_model
 from app.core.logging import get_logger
+from app.retrieval.hybrid_retriever import get_hybrid_retriever
 from app.models.schemas import KnowledgeSearchRequest
 from app.rag.frontmatter_parser import parse_frontmatter
 from app.rag.legal_splitter import split_legal_document
@@ -178,6 +179,12 @@ class KnowledgeService:
         elif hasattr(self.vectorstore, "_client") and hasattr(self.vectorstore._client, "persist"):
             self.vectorstore._client.persist()
 
+        # 文档入库后使 BM25 索引失效，下次检索时自动重建
+        try:
+            get_hybrid_retriever().invalidate()
+        except Exception as exc:
+            logger.warning("BM25 索引失效操作失败", error=str(exc))
+
         draft_path.unlink(missing_ok=True)
         logger.info(
             "Document confirmed and indexed",
@@ -257,7 +264,11 @@ class KnowledgeService:
         """删除文档"""
         # 根据 doc_id 过滤并删除
         # Chroma 的删除操作
-        pass
+        # 文档删除后使 BM25 索引失效
+        try:
+            get_hybrid_retriever().invalidate()
+        except Exception as exc:
+            logger.warning("BM25 索引失效操作失败", error=str(exc))
     
     async def list_documents(self, subject: Optional[str], page: int, size: int) -> list:
         """列出文档"""

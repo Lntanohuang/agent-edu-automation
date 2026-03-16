@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 
 from app.core.config import settings
 from app.core.logging import get_logger, setup_logging
-from app.routers import rag, plan_agent, question_generation
+from app.routers import rag, plan_agent, question_generation, feedback
 
 # 设置日志
 setup_logging()
@@ -64,6 +64,7 @@ async def health_check():
 app.include_router(rag.router, prefix="/rag", tags=["RAG"])
 app.include_router(plan_agent.router, prefix="/plan-agent", tags=["教案Agent"])
 app.include_router(question_generation.router, prefix="/question-gen", tags=["智能出题"])
+app.include_router(feedback.router, tags=["用户反馈"])
 
 
 @app.on_event("startup")

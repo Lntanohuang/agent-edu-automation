@@ -9,7 +9,8 @@ from app.core.config import settings
 from app.core.logging import get_logger
 from app.core.tracing import traceable
 from app.llm.model_factory import chat_llm
-from app.llm.vector_store import get_rag_vector_store
+from app.retrieval.query_analyzer import analyze_query, get_k_for_intent
+from app.retrieval.hybrid_retriever import get_hybrid_retriever
 from app.memory.conversation_summary import (
     ConversationSummaryStore,
     compose_history_context,
@@ -110,32 +111,43 @@ async def _run_rag_pipeline(
     teaching_task_skill: TeachingTaskGeneratorSkill,
 ) -> dict:
     """执行 RAG 主链路：检索 -> 技能生成 -> 审计（低置信度重试一次） -> 质量自评 -> 任务补全。"""
-    vector_store = get_rag_vector_store()
+    hybrid_retriever = get_hybrid_retriever()
+    analysis = analyze_query(query)
     retrieval_query = query
     if history_text:
         retrieval_query = f"{query}\n\n历史上下文（精简）:\n{history_text}"
 
-    retrieved_docs = vector_store.similarity_search(retrieval_query, k=6)
+    k = get_k_for_intent(analysis.intent)
+    retrieved_docs = hybrid_retriever.retrieve(retrieval_query, analysis, k=k)
     selected_skill = await select_skill(query)
     skill_query = query if not history_text else f"历史对话（精简）:\n{history_text}\n\n当前问题：{query}"
     skill_result = await selected_skill.run(skill_query, retrieved_docs)
+
+    # rerank 分数用于置信度评估
+    from app.retrieval.reranker import rerank as do_rerank
+    reranked_with_scores = do_rerank(query, retrieved_docs, top_k=len(retrieved_docs))
+    rerank_scores = [s for _, s in reranked_with_scores[:3]] if reranked_with_scores else None
 
     audited = source_audit_skill.run(
         answer=skill_result.answer,
         sources=skill_result.sources,
         retrieved_docs=retrieved_docs,
+        rerank_scores=rerank_scores,
     )
 
     # ── P1: SourceAudit 反馈循环 — 低置信度时扩大检索重试一次 ──
     if audited.confidence == "low":
         logger.info("SourceAudit confidence=low, retrying with expanded retrieval (k=12)")
-        retry_docs = vector_store.similarity_search(query, k=12)
+        retry_docs = hybrid_retriever.retrieve(query, analysis, k=12)
         if retry_docs:
             retry_result = await selected_skill.run(skill_query, retry_docs)
+            retry_reranked = do_rerank(query, retry_docs, top_k=len(retry_docs))
+            retry_rerank_scores = [s for _, s in retry_reranked[:3]] if retry_reranked else None
             retry_audited = source_audit_skill.run(
                 answer=retry_result.answer,
                 sources=retry_result.sources,
                 retrieved_docs=retry_docs,
+                rerank_scores=retry_rerank_scores,
             )
             if retry_audited.confidence != "low":
                 skill_result = retry_result
