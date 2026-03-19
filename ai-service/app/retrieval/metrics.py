@@ -28,6 +28,8 @@ class RetrievalMetrics:
     final_confidence: str = ""
     latency_ms: Dict[str, float] = field(default_factory=dict)
     timestamp: str = field(default_factory=lambda: time.strftime("%Y-%m-%dT%H:%M:%S"))
+    fusion_method: str = "rrf"  # 融合方法
+    rrf_weights: List[float] = field(default_factory=list)  # RRF 各路权重
 
 
 def log_retrieval_metrics(metrics: RetrievalMetrics) -> None:
@@ -54,6 +56,8 @@ def log_retrieval_metrics(metrics: RetrievalMetrics) -> None:
             "final_confidence": metrics.final_confidence,
             "latency_ms": metrics.latency_ms,
             "timestamp": metrics.timestamp,
+            "fusion_method": metrics.fusion_method,
+            "rrf_weights": metrics.rrf_weights,
         })
         logger.debug("检索指标已写入 MongoDB", trace_id=metrics.trace_id)
     except Exception as exc:

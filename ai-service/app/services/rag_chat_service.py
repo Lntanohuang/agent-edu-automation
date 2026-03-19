@@ -11,6 +11,7 @@ from app.core.tracing import traceable
 from app.llm.model_factory import chat_llm
 from app.retrieval.query_analyzer import analyze_query, get_k_for_intent
 from app.retrieval.hybrid_retriever import get_hybrid_retriever
+from app.retrieval.retrieval_validator import validate_retrieval, rewrite_query
 from app.memory.conversation_summary import (
     ConversationSummaryStore,
     compose_history_context,
@@ -118,7 +119,24 @@ async def _run_rag_pipeline(
         retrieval_query = f"{query}\n\n历史上下文（精简）:\n{history_text}"
 
     k = get_k_for_intent(analysis.intent)
-    retrieved_docs = hybrid_retriever.retrieve(retrieval_query, analysis, k=k)
+
+    # ── 检索验证重试环 ──
+    # 先用原始 query 检索，验证相关性；若验证未通过则重写 query 重试一次
+    current_query = retrieval_query
+    current_analysis = analysis
+    retrieved_docs = hybrid_retriever.retrieve(current_query, current_analysis, k=k)
+    if not await validate_retrieval(query, retrieved_docs):
+        logger.info("检索验证未通过，重写查询重试")
+        rewritten = await rewrite_query(query)
+        rewritten_analysis = analyze_query(rewritten)
+        rewritten_retrieval_query = rewritten
+        if history_text:
+            rewritten_retrieval_query = f"{rewritten}\n\n历史上下文（精简）:\n{history_text}"
+        retry_docs = hybrid_retriever.retrieve(rewritten_retrieval_query, rewritten_analysis, k=k)
+        if retry_docs:
+            retrieved_docs = retry_docs
+            logger.info("使用重写查询的检索结果 rewritten_query=%s", rewritten[:60])
+
     selected_skill = await select_skill(query)
     skill_query = query if not history_text else f"历史对话（精简）:\n{history_text}\n\n当前问题：{query}"
     skill_result = await selected_skill.run(skill_query, retrieved_docs)

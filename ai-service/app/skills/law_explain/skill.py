@@ -41,3 +41,13 @@ config = SkillConfig(
     ],
     confidence_with_docs="medium",
 )
+
+from app.skills.skill_agent import RetrievalStrategy, SkillAgent  # noqa: E402
+
+# 概念解释需要广泛检索
+retrieval_strategy = RetrievalStrategy(
+    k=6,
+    use_hyde=True,  # 概念解释最适合 HyDE
+)
+
+agent = SkillAgent(config, retrieval_strategy)

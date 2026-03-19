@@ -202,3 +202,6 @@ zstandard==0.25.0
 # 混合检索依赖
 rank-bm25>=0.2.2
 jieba>=0.42.1
+
+# Reranker
+FlashRank>=0.2.0

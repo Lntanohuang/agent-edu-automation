@@ -54,3 +54,7 @@ config = SkillConfig(
     ],
     confidence_with_docs="high",
 )
+
+from app.skills.skill_agent import RetrievalStrategy, SkillAgent  # noqa: E402
+
+agent = SkillAgent(config)

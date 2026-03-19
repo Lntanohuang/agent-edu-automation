@@ -41,3 +41,13 @@ config = SkillConfig(
     ],
     confidence_with_docs="high",
 )
+
+from app.skills.skill_agent import RetrievalStrategy, SkillAgent  # noqa: E402
+
+retrieval_strategy = RetrievalStrategy(
+    k=8,  # 案例分析需要更多上下文
+    bm25_weight_override=0.3,  # 轻 BM25，重语义
+    use_hyde=True,  # 案例查询适合 HyDE
+)
+
+agent = SkillAgent(config, retrieval_strategy)

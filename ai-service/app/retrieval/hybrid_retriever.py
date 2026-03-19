@@ -22,6 +22,7 @@ from app.llm.vector_store import get_rag_vector_store
 from app.retrieval.query_analyzer import QueryAnalysis
 from app.retrieval.reranker import rerank
 from app.retrieval.metrics import RetrievalMetrics, log_retrieval_metrics
+from app.retrieval.hyde import generate_hypothetical_document_sync
 
 logger = get_logger(__name__)
 
@@ -130,6 +131,15 @@ class HybridRetriever:
         vector_store = get_rag_vector_store()
         return vector_store.similarity_search(query, k=k)
 
+    def _hyde_dense_search(self, hypothesis: str, k: int) -> List[Document]:
+        """用 HyDE 假设文档做向量检索。"""
+        vector_store = get_rag_vector_store()
+        docs = vector_store.similarity_search(hypothesis, k=k)
+        # 标记来源为 HyDE
+        for doc in docs:
+            doc.metadata["_retrieval_source"] = "hyde"
+        return docs
+
     def _metadata_filter_search(self, query: str, analysis: QueryAnalysis, k: int) -> List[Document]:
         """基于 metadata 过滤的检索。"""
         if not analysis.metadata_filters:
@@ -195,6 +205,26 @@ class HybridRetriever:
                 unique.append(doc)
         return unique
 
+    def _rrf_fusion(self, doc_lists: list[list[Document]], weights: list[float], k_rrf: int = 60) -> list[Document]:
+        """
+        RRF 融合多路召回结果。
+
+        RRF_score(d) = Σ weight_i / (k + rank_i(d))
+        k=60 是业界常用值。
+        """
+        scores: dict[str, float] = {}  # content_hash -> score
+        doc_map: dict[str, Document] = {}  # content_hash -> Document
+
+        for doc_list, weight in zip(doc_lists, weights):
+            for rank, doc in enumerate(doc_list):
+                content_hash = hashlib.md5(doc.page_content.encode()).hexdigest()
+                if content_hash not in doc_map:
+                    doc_map[content_hash] = doc
+                scores[content_hash] = scores.get(content_hash, 0.0) + weight / (k_rrf + rank + 1)
+
+        sorted_hashes = sorted(scores, key=scores.get, reverse=True)
+        return [doc_map[h] for h in sorted_hashes]
+
     def retrieve(
         self,
         query: str,
@@ -236,6 +266,20 @@ class HybridRetriever:
         latency["dense_ms"] = round((time.time() - t0) * 1000, 1)
         metrics.vector_doc_count = len(dense_docs)
 
+        # ── 路 2b: HyDE Dense（仅 concept_explain / general 意图） ──
+        if analysis.intent in ("concept_explain", "general"):
+            try:
+                hypothesis = generate_hypothetical_document_sync(query)
+                if hypothesis:
+                    t0 = time.time()
+                    hyde_docs = self._hyde_dense_search(hypothesis, k=dense_k)
+                    latency["hyde_ms"] = round((time.time() - t0) * 1000, 1)
+                    # 把 HyDE 结果追加到 dense_docs
+                    dense_docs = dense_docs + hyde_docs
+                    metrics.vector_doc_count = len(dense_docs)
+            except Exception as exc:
+                logger.warning("HyDE 检索失败，跳过 error=%s", str(exc))
+
         # ── 路 3: Metadata filter ──
         t0 = time.time()
         meta_docs = self._metadata_filter_search(query, analysis, k=k)
@@ -247,10 +291,15 @@ class HybridRetriever:
         latency["rule_ms"] = round((time.time() - t0) * 1000, 1)
         metrics.rule_doc_count = len(rule_docs)
 
-        # ── RRF 融合：规则召回优先 > BM25 > Metadata > Dense ──
-        merged = rule_docs + bm25_docs + meta_docs + dense_docs
-        unique_docs = self._dedup_docs(merged)
+        # ── RRF 真融合：规则召回优先 > BM25(动态权重) > Metadata > Dense ──
+        weights = [2.0, 1.0 + analysis.bm25_boost, 0.8, 0.6]
+        unique_docs = self._rrf_fusion(
+            [rule_docs, bm25_docs, meta_docs, dense_docs],
+            weights,
+        )
         metrics.merged_doc_count = len(unique_docs)
+        metrics.fusion_method = "rrf"
+        metrics.rrf_weights = weights
 
         # ── Rerank ──
         t0 = time.time()

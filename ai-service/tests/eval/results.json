@@ -1,0 +1,1772 @@
+{
+  "summary": {
+    "total": 65,
+    "intent_accuracy": 0.5692307692307692,
+    "avg_keyword_hit_rate": 0.7592307692307693,
+    "source_accuracy": 0.9,
+    "mean_mrr": 0.7428205128205128,
+    "recall_at_3": 0.8769230769230769,
+    "recall_at_6": 0.9230769230769231,
+    "avg_latency_ms": 340.83076923076925,
+    "by_intent": {
+      "law_article": {
+        "count": 19,
+        "intent_accuracy": 0.8421052631578947,
+        "avg_keyword_hit_rate": 0.631578947368421,
+        "mean_mrr": 0.6140350877192983,
+        "recall_at_6": 0.7894736842105263
+      },
+      "case_lookup": {
+        "count": 10,
+        "intent_accuracy": 0.0,
+        "avg_keyword_hit_rate": 0.9333333333333333,
+        "mean_mrr": 0.925,
+        "recall_at_6": 1.0
+      },
+      "concept_explain": {
+        "count": 18,
+        "intent_accuracy": 0.16666666666666666,
+        "avg_keyword_hit_rate": 0.825,
+        "mean_mrr": 0.7981481481481482,
+        "recall_at_6": 1.0
+      },
+      "general": {
+        "count": 18,
+        "intent_accuracy": 1.0,
+        "avg_keyword_hit_rate": 0.7314814814814814,
+        "mean_mrr": 0.7222222222222222,
+        "recall_at_6": 0.9444444444444444
+      }
+    },
+    "by_difficulty": {
+      "easy": {
+        "count": 24,
+        "avg_keyword_hit_rate": 0.74375,
+        "mean_mrr": 0.7083333333333334,
+        "recall_at_6": 0.9166666666666666
+      },
+      "medium": {
+        "count": 30,
+        "avg_keyword_hit_rate": 0.7666666666666667,
+        "mean_mrr": 0.7705555555555555,
+        "recall_at_6": 0.9333333333333333
+      },
+      "hard": {
+        "count": 11,
+        "avg_keyword_hit_rate": 0.7727272727272727,
+        "mean_mrr": 0.7424242424242423,
+        "recall_at_6": 0.9090909090909091
+      }
+    }
+  },
+  "results": [
+    {
+      "id": "law_001",
+      "query": "劳动合同法第47条规定了什么",
+      "intent_expected": "law_article",
+      "intent_predicted": "law_article",
+      "intent_correct": true,
+      "keywords_expected": [
+        "经济补偿",
+        "工作年限",
+        "月工资"
+      ],
+      "keywords_found": [
+        "经济补偿",
+        "工作年限",
+        "月工资"
+      ],
+      "keyword_hit_rate": 1.0,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 7142.0,
+      "difficulty": "easy",
+      "error": null
+    },
+    {
+      "id": "law_002",
+      "query": "劳动合同法第82条关于双倍工资的规定",
+      "intent_expected": "law_article",
+      "intent_predicted": "law_article",
+      "intent_correct": true,
+      "keywords_expected": [
+        "书面劳动合同",
+        "二倍的工资",
+        "超过一个月"
+      ],
+      "keywords_found": [
+        "书面劳动合同",
+        "二倍的工资",
+        "超过一个月"
+      ],
+      "keyword_hit_rate": 1.0,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 1351.6,
+      "difficulty": "easy",
+      "error": null
+    },
+    {
+      "id": "law_003",
+      "query": "劳动合同法第10条怎么规定的",
+      "intent_expected": "law_article",
+      "intent_predicted": "law_article",
+      "intent_correct": true,
+      "keywords_expected": [
+        "书面劳动合同",
+        "用工之日",
+        "一个月内"
+      ],
+      "keywords_found": [
+        "书面劳动合同",
+        "用工之日",
+        "一个月内"
+      ],
+      "keyword_hit_rate": 1.0,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 0.3333333333333333,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 316.4,
+      "difficulty": "easy",
+      "error": null
+    },
+    {
+      "id": "law_004",
+      "query": "劳动合同法第14条无固定期限合同的规定",
+      "intent_expected": "law_article",
+      "intent_predicted": "law_article",
+      "intent_correct": true,
+      "keywords_expected": [
+        "无固定期限劳动合同",
+        "连续工作满十年",
+        "续订"
+      ],
+      "keywords_found": [
+        "无固定期限劳动合同"
+      ],
+      "keyword_hit_rate": 0.3333333333333333,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 0.5,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 311.9,
+      "difficulty": "easy",
+      "error": null
+    },
+    {
+      "id": "law_005",
+      "query": "劳动合同法第38条劳动者可以解除劳动合同的情形",
+      "intent_expected": "law_article",
+      "intent_predicted": "law_article",
+      "intent_correct": true,
+      "keywords_expected": [
+        "劳动者",
+        "解除劳动合同",
+        "未及时足额支付劳动报酬"
+      ],
+      "keywords_found": [
+        "劳动者",
+        "解除劳动合同",
+        "未及时足额支付劳动报酬"
+      ],
+      "keyword_hit_rate": 1.0,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 317.5,
+      "difficulty": "easy",
+      "error": null
+    },
+    {
+      "id": "law_006",
+      "query": "劳动合同法第39条用人单位可以解除合同的情形",
+      "intent_expected": "law_article",
+      "intent_predicted": "law_article",
+      "intent_correct": true,
+      "keywords_expected": [
+        "试用期",
+        "严重违反",
+        "规章制度"
+      ],
+      "keywords_found": [
+        "试用期",
+        "规章制度"
+      ],
+      "keyword_hit_rate": 0.6666666666666666,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 0.5,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 329.6,
+      "difficulty": "easy",
+      "error": null
+    },
+    {
+      "id": "law_007",
+      "query": "劳动合同法第40条无过失性辞退的规定是什么",
+      "intent_expected": "law_article",
+      "intent_predicted": "law_article",
+      "intent_correct": true,
+      "keywords_expected": [
+        "提前三十日",
+        "医疗期满",
+        "不能胜任工作"
+      ],
+      "keywords_found": [],
+      "keyword_hit_rate": 0.0,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 0.0,
+      "recall_at_3": false,
+      "recall_at_6": false,
+      "num_docs_retrieved": 6,
+      "latency_ms": 315.9,
+      "difficulty": "medium",
+      "error": null
+    },
+    {
+      "id": "law_008",
+      "query": "劳动合同法第46条哪些情形需要支付经济补偿",
+      "intent_expected": "law_article",
+      "intent_predicted": "law_article",
+      "intent_correct": true,
+      "keywords_expected": [
+        "经济补偿",
+        "解除劳动合同",
+        "终止固定期限劳动合同"
+      ],
+      "keywords_found": [
+        "经济补偿",
+        "解除劳动合同"
+      ],
+      "keyword_hit_rate": 0.6666666666666666,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 291.7,
+      "difficulty": "medium",
+      "error": null
+    },
+    {
+      "id": "law_009",
+      "query": "劳动合同法第87条违法解除的赔偿金标准",
+      "intent_expected": "law_article",
+      "intent_predicted": "law_article",
+      "intent_correct": true,
+      "keywords_expected": [
+        "赔偿金",
+        "经济补偿标准的二倍",
+        "违反本法规定"
+      ],
+      "keywords_found": [
+        "赔偿金",
+        "经济补偿标准的二倍",
+        "违反本法规定"
+      ],
+      "keyword_hit_rate": 1.0,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 327.1,
+      "difficulty": "easy",
+      "error": null
+    },
+    {
+      "id": "law_010",
+      "query": "劳动法第44条加班工资怎么计算",
+      "intent_expected": "law_article",
+      "intent_predicted": "law_article",
+      "intent_correct": true,
+      "keywords_expected": [
+        "百分之一百五十",
+        "百分之二百",
+        "百分之三百"
+      ],
+      "keywords_found": [],
+      "keyword_hit_rate": 0.0,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 0.0,
+      "recall_at_3": false,
+      "recall_at_6": false,
+      "num_docs_retrieved": 6,
+      "latency_ms": 321.9,
+      "difficulty": "easy",
+      "error": null
+    },
+    {
+      "id": "law_011",
+      "query": "工伤保险条例第14条认定工伤的条件",
+      "intent_expected": "law_article",
+      "intent_predicted": "law_article",
+      "intent_correct": true,
+      "keywords_expected": [
+        "工作时间",
+        "工作场所",
+        "工作原因"
+      ],
+      "keywords_found": [],
+      "keyword_hit_rate": 0.0,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 0.0,
+      "recall_at_3": false,
+      "recall_at_6": false,
+      "num_docs_retrieved": 6,
+      "latency_ms": 297.5,
+      "difficulty": "easy",
+      "error": null
+    },
+    {
+      "id": "law_012",
+      "query": "职工带薪年休假条例规定年假几天",
+      "intent_expected": "law_article",
+      "intent_predicted": "general",
+      "intent_correct": false,
+      "keywords_expected": [
+        "年休假5天",
+        "年休假10天",
+        "年休假15天"
+      ],
+      "keywords_found": [
+        "年休假5天",
+        "年休假10天",
+        "年休假15天"
+      ],
+      "keyword_hit_rate": 1.0,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 0.3333333333333333,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 162.5,
+      "difficulty": "easy",
+      "error": null
+    },
+    {
+      "id": "law_013",
+      "query": "劳动合同法第23条竞业限制的规定",
+      "intent_expected": "law_article",
+      "intent_predicted": "law_article",
+      "intent_correct": true,
+      "keywords_expected": [
+        "竞业限制",
+        "商业秘密",
+        "经济补偿"
+      ],
+      "keywords_found": [
+        "竞业限制",
+        "商业秘密",
+        "经济补偿"
+      ],
+      "keyword_hit_rate": 1.0,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 326.6,
+      "difficulty": "medium",
+      "error": null
+    },
+    {
+      "id": "law_014",
+      "query": "劳动合同法第42条哪些情形不得解除劳动合同",
+      "intent_expected": "law_article",
+      "intent_predicted": "law_article",
+      "intent_correct": true,
+      "keywords_expected": [
+        "医疗期内",
+        "孕期",
+        "哺乳期"
+      ],
+      "keywords_found": [
+        "医疗期内"
+      ],
+      "keyword_hit_rate": 0.3333333333333333,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 0.5,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 425.6,
+      "difficulty": "medium",
+      "error": null
+    },
+    {
+      "id": "law_015",
+      "query": "劳动法第36条标准工时制度是怎么规定的",
+      "intent_expected": "law_article",
+      "intent_predicted": "law_article",
+      "intent_correct": true,
+      "keywords_expected": [
+        "每日工作时间不超过八小时",
+        "平均每周工作时间不超过四十四小时",
+        "工时制度"
+      ],
+      "keywords_found": [
+        "每日工作时间不超过八小时",
+        "工时制度"
+      ],
+      "keyword_hit_rate": 0.6666666666666666,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 360.0,
+      "difficulty": "easy",
+      "error": null
+    },
+    {
+      "id": "case_001",
+      "query": "加班费争议案中法院是怎么判的",
+      "intent_expected": "case_lookup",
+      "intent_predicted": "general",
+      "intent_correct": false,
+      "keywords_expected": [
+        "加班费",
+        "举证责任",
+        "不定时工作制"
+      ],
+      "keywords_found": [
+        "加班费",
+        "举证责任"
+      ],
+      "keyword_hit_rate": 0.6666666666666666,
+      "expected_source": "加班费争议案",
+      "source_found": false,
+      "mrr": 0.25,
+      "recall_at_3": false,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 159.6,
+      "difficulty": "medium",
+      "error": null
+    },
+    {
+      "id": "case_002",
+      "query": "加班费案件中用人单位掌握考勤记录拒不提供如何处理",
+      "intent_expected": "case_lookup",
+      "intent_predicted": "general",
+      "intent_correct": false,
+      "keywords_expected": [
+        "考勤记录",
+        "举证不利",
+        "加班事实"
+      ],
+      "keywords_found": [
+        "考勤记录",
+        "举证不利",
+        "加班事实"
+      ],
+      "keyword_hit_rate": 1.0,
+      "expected_source": "加班费争议案",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 160.2,
+      "difficulty": "medium",
+      "error": null
+    },
+    {
+      "id": "case_003",
+      "query": "未签劳动合同双倍工资案的裁判结果是什么",
+      "intent_expected": "case_lookup",
+      "intent_predicted": "concept_explain",
+      "intent_correct": false,
+      "keywords_expected": [
+        "双倍工资差额",
+        "书面劳动合同",
+        "锐智公司"
+      ],
+      "keywords_found": [
+        "双倍工资差额",
+        "书面劳动合同",
+        "锐智公司"
+      ],
+      "keyword_hit_rate": 1.0,
+      "expected_source": "未签劳动合同双倍工资案",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 158.9,
+      "difficulty": "medium",
+      "error": null
+    },
+    {
+      "id": "case_004",
+      "query": "劳动者拒绝签劳动合同用人单位是否还要承担双倍工资责任",
+      "intent_expected": "case_lookup",
+      "intent_predicted": "general",
+      "intent_correct": false,
+      "keywords_expected": [
+        "拒绝签订",
+        "终止劳动关系",
+        "继续用工"
+      ],
+      "keywords_found": [
+        "拒绝签订",
+        "终止劳动关系",
+        "继续用工"
+      ],
+      "keyword_hit_rate": 1.0,
+      "expected_source": "未签劳动合同双倍工资案",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 158.1,
+      "difficulty": "hard",
+      "error": null
+    },
+    {
+      "id": "case_005",
+      "query": "工伤认定案中上下班途中合理时间如何界定",
+      "intent_expected": "case_lookup",
+      "intent_predicted": "general",
+      "intent_correct": false,
+      "keywords_expected": [
+        "上下班途中",
+        "合理时间",
+        "交通事故"
+      ],
+      "keywords_found": [
+        "上下班途中",
+        "合理时间",
+        "交通事故"
+      ],
+      "keyword_hit_rate": 1.0,
+      "expected_source": "工伤认定争议案",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 162.2,
+      "difficulty": "medium",
+      "error": null
+    },
+    {
+      "id": "case_006",
+      "query": "绕路买东西回家发生交通事故能认定为工伤吗",
+      "intent_expected": "case_lookup",
+      "intent_predicted": "general",
+      "intent_correct": false,
+      "keywords_expected": [
+        "合理路线",
+        "日常生活需要",
+        "工伤认定"
+      ],
+      "keywords_found": [
+        "合理路线",
+        "工伤认定"
+      ],
+      "keyword_hit_rate": 0.6666666666666666,
+      "expected_source": "工伤认定争议案",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 164.9,
+      "difficulty": "hard",
+      "error": null
+    },
+    {
+      "id": "case_007",
+      "query": "医疗期内被公司辞退违法解除劳动合同赔偿案怎么判的",
+      "intent_expected": "case_lookup",
+      "intent_predicted": "general",
+      "intent_correct": false,
+      "keywords_expected": [
+        "医疗期",
+        "违法解除",
+        "赔偿金"
+      ],
+      "keywords_found": [
+        "医疗期",
+        "违法解除",
+        "赔偿金"
+      ],
+      "keyword_hit_rate": 1.0,
+      "expected_source": "违法解除劳动合同赔偿案",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 166.8,
+      "difficulty": "medium",
+      "error": null
+    },
+    {
+      "id": "case_008",
+      "query": "违法解除劳动合同赔偿金是经济补偿的几倍",
+      "intent_expected": "case_lookup",
+      "intent_predicted": "general",
+      "intent_correct": false,
+      "keywords_expected": [
+        "赔偿金",
+        "经济补偿标准的二倍",
+        "违法解除"
+      ],
+      "keywords_found": [
+        "赔偿金",
+        "经济补偿标准的二倍",
+        "违法解除"
+      ],
+      "keyword_hit_rate": 1.0,
+      "expected_source": "违法解除劳动合同赔偿案",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 161.2,
+      "difficulty": "easy",
+      "error": null
+    },
+    {
+      "id": "case_009",
+      "query": "竞业限制纠纷案公司没有支付补偿金员工还要遵守竞业限制吗",
+      "intent_expected": "case_lookup",
+      "intent_predicted": "general",
+      "intent_correct": false,
+      "keywords_expected": [
+        "竞业限制",
+        "经济补偿",
+        "三个月未支付"
+      ],
+      "keywords_found": [
+        "竞业限制",
+        "经济补偿",
+        "三个月未支付"
+      ],
+      "keyword_hit_rate": 1.0,
+      "expected_source": "竞业限制纠纷案",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 163.7,
+      "difficulty": "hard",
+      "error": null
+    },
+    {
+      "id": "case_010",
+      "query": "竞业限制协议未约定补偿金额是否有效",
+      "intent_expected": "case_lookup",
+      "intent_predicted": "general",
+      "intent_correct": false,
+      "keywords_expected": [
+        "竞业限制协议",
+        "未约定经济补偿",
+        "协议效力"
+      ],
+      "keywords_found": [
+        "竞业限制协议",
+        "未约定经济补偿",
+        "协议效力"
+      ],
+      "keyword_hit_rate": 1.0,
+      "expected_source": "竞业限制纠纷案",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 160.7,
+      "difficulty": "hard",
+      "error": null
+    },
+    {
+      "id": "concept_001",
+      "query": "什么是经济补偿金",
+      "intent_expected": "concept_explain",
+      "intent_predicted": "general",
+      "intent_correct": false,
+      "keywords_expected": [
+        "经济补偿",
+        "劳动合同",
+        "解除"
+      ],
+      "keywords_found": [
+        "经济补偿",
+        "劳动合同",
+        "解除"
+      ],
+      "keyword_hit_rate": 1.0,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 452.6,
+      "difficulty": "easy",
+      "error": null
+    },
+    {
+      "id": "concept_002",
+      "query": "经济补偿金和赔偿金有什么区别",
+      "intent_expected": "concept_explain",
+      "intent_predicted": "general",
+      "intent_correct": false,
+      "keywords_expected": [
+        "经济补偿",
+        "赔偿金",
+        "二倍"
+      ],
+      "keywords_found": [
+        "经济补偿",
+        "赔偿金",
+        "二倍"
+      ],
+      "keyword_hit_rate": 1.0,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 154.4,
+      "difficulty": "medium",
+      "error": null
+    },
+    {
+      "id": "concept_003",
+      "query": "试用期最长可以约定多久",
+      "intent_expected": "concept_explain",
+      "intent_predicted": "general",
+      "intent_correct": false,
+      "keywords_expected": [
+        "试用期",
+        "不得超过",
+        "劳动合同期限"
+      ],
+      "keywords_found": [
+        "试用期",
+        "不得超过",
+        "劳动合同期限"
+      ],
+      "keyword_hit_rate": 1.0,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 213.7,
+      "difficulty": "easy",
+      "error": null
+    },
+    {
+      "id": "concept_004",
+      "query": "什么是竞业限制，竞业限制期限最长多少年",
+      "intent_expected": "concept_explain",
+      "intent_predicted": "general",
+      "intent_correct": false,
+      "keywords_expected": [
+        "竞业限制",
+        "不得超过二年",
+        "高级管理人员"
+      ],
+      "keywords_found": [
+        "竞业限制",
+        "不得超过二年",
+        "高级管理人员"
+      ],
+      "keyword_hit_rate": 1.0,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 159.5,
+      "difficulty": "easy",
+      "error": null
+    },
+    {
+      "id": "concept_005",
+      "query": "什么是劳务派遣，劳务派遣和正式员工有什么区别",
+      "intent_expected": "concept_explain",
+      "intent_predicted": "general",
+      "intent_correct": false,
+      "keywords_expected": [
+        "劳务派遣",
+        "用工单位",
+        "派遣单位"
+      ],
+      "keywords_found": [
+        "劳务派遣",
+        "用工单位",
+        "派遣单位"
+      ],
+      "keyword_hit_rate": 1.0,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 159.3,
+      "difficulty": "medium",
+      "error": null
+    },
+    {
+      "id": "concept_006",
+      "query": "什么情况下可以签无固定期限劳动合同",
+      "intent_expected": "concept_explain",
+      "intent_predicted": "general",
+      "intent_correct": false,
+      "keywords_expected": [
+        "无固定期限劳动合同",
+        "连续工作满十年",
+        "连续订立二次固定期限劳动合同"
+      ],
+      "keywords_found": [
+        "无固定期限劳动合同",
+        "连续工作满十年",
+        "连续订立二次固定期限劳动合同"
+      ],
+      "keyword_hit_rate": 1.0,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 170.4,
+      "difficulty": "medium",
+      "error": null
+    },
+    {
+      "id": "concept_007",
+      "query": "员工主动辞职还能拿到经济补偿金吗",
+      "intent_expected": "concept_explain",
+      "intent_predicted": "general",
+      "intent_correct": false,
+      "keywords_expected": [
+        "经济补偿",
+        "劳动者解除",
+        "未及时足额支付劳动报酬"
+      ],
+      "keywords_found": [
+        "经济补偿"
+      ],
+      "keyword_hit_rate": 0.3333333333333333,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 179.4,
+      "difficulty": "medium",
+      "error": null
+    },
+    {
+      "id": "concept_008",
+      "query": "什么是不定时工作制",
+      "intent_expected": "concept_explain",
+      "intent_predicted": "general",
+      "intent_correct": false,
+      "keywords_expected": [
+        "不定时工作制",
+        "劳动行政部门",
+        "审批"
+      ],
+      "keywords_found": [
+        "不定时工作制",
+        "劳动行政部门",
+        "审批"
+      ],
+      "keyword_hit_rate": 1.0,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 239.0,
+      "difficulty": "medium",
+      "error": null
+    },
+    {
+      "id": "concept_009",
+      "query": "工资必须用现金发放吗",
+      "intent_expected": "concept_explain",
+      "intent_predicted": "general",
+      "intent_correct": false,
+      "keywords_expected": [
+        "货币形式",
+        "按月支付",
+        "克扣"
+      ],
+      "keywords_found": [
+        "货币形式",
+        "按月支付",
+        "克扣"
+      ],
+      "keyword_hit_rate": 1.0,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 0.3333333333333333,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 201.1,
+      "difficulty": "easy",
+      "error": null
+    },
+    {
+      "id": "concept_010",
+      "query": "医疗期是什么，医疗期最长多久",
+      "intent_expected": "concept_explain",
+      "intent_predicted": "concept_explain",
+      "intent_correct": true,
+      "keywords_expected": [
+        "医疗期",
+        "患病",
+        "非因工负伤"
+      ],
+      "keywords_found": [
+        "医疗期",
+        "患病",
+        "非因工负伤"
+      ],
+      "keyword_hit_rate": 1.0,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 0.5,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 146.7,
+      "difficulty": "medium",
+      "error": null
+    },
+    {
+      "id": "concept_011",
+      "query": "什么叫做工伤",
+      "intent_expected": "concept_explain",
+      "intent_predicted": "general",
+      "intent_correct": false,
+      "keywords_expected": [
+        "工伤",
+        "工作时间",
+        "工作场所",
+        "工作原因"
+      ],
+      "keywords_found": [
+        "工伤"
+      ],
+      "keyword_hit_rate": 0.25,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 131.4,
+      "difficulty": "easy",
+      "error": null
+    },
+    {
+      "id": "concept_012",
+      "query": "单位不安排年假要怎么补偿",
+      "intent_expected": "concept_explain",
+      "intent_predicted": "general",
+      "intent_correct": false,
+      "keywords_expected": [
+        "年休假",
+        "日工资收入的300%",
+        "年休假工资报酬"
+      ],
+      "keywords_found": [
+        "年休假",
+        "日工资收入的300%",
+        "年休假工资报酬"
+      ],
+      "keyword_hit_rate": 1.0,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 156.1,
+      "difficulty": "medium",
+      "error": null
+    },
+    {
+      "id": "concept_013",
+      "query": "辞职和被辞退在法律上有什么不同",
+      "intent_expected": "concept_explain",
+      "intent_predicted": "general",
+      "intent_correct": false,
+      "keywords_expected": [
+        "劳动者解除",
+        "用人单位解除",
+        "经济补偿"
+      ],
+      "keywords_found": [
+        "经济补偿"
+      ],
+      "keyword_hit_rate": 0.3333333333333333,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 0.2,
+      "recall_at_3": false,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 163.6,
+      "difficulty": "medium",
+      "error": null
+    },
+    {
+      "id": "concept_014",
+      "query": "集体合同是什么，和个人劳动合同有什么区别",
+      "intent_expected": "concept_explain",
+      "intent_predicted": "concept_explain",
+      "intent_correct": true,
+      "keywords_expected": [
+        "集体合同",
+        "工会",
+        "劳动报酬"
+      ],
+      "keywords_found": [
+        "集体合同",
+        "劳动报酬"
+      ],
+      "keyword_hit_rate": 0.6666666666666666,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 160.3,
+      "difficulty": "medium",
+      "error": null
+    },
+    {
+      "id": "concept_015",
+      "query": "社会保险包含哪几种险",
+      "intent_expected": "concept_explain",
+      "intent_predicted": "general",
+      "intent_correct": false,
+      "keywords_expected": [
+        "养老保险",
+        "医疗保险",
+        "工伤保险",
+        "失业保险",
+        "生育保险"
+      ],
+      "keywords_found": [
+        "医疗保险",
+        "工伤保险",
+        "失业保险"
+      ],
+      "keyword_hit_rate": 0.6,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 164.2,
+      "difficulty": "easy",
+      "error": null
+    },
+    {
+      "id": "general_001",
+      "query": "公司不给交社保怎么办",
+      "intent_expected": "general",
+      "intent_predicted": "general",
+      "intent_correct": true,
+      "keywords_expected": [
+        "社会保险费",
+        "解除劳动合同",
+        "经济补偿"
+      ],
+      "keywords_found": [],
+      "keyword_hit_rate": 0.0,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 0.0,
+      "recall_at_3": false,
+      "recall_at_6": false,
+      "num_docs_retrieved": 6,
+      "latency_ms": 216.5,
+      "difficulty": "medium",
+      "error": null
+    },
+    {
+      "id": "general_002",
+      "query": "被公司违法辞退怎么赔偿",
+      "intent_expected": "general",
+      "intent_predicted": "general",
+      "intent_correct": true,
+      "keywords_expected": [
+        "违法解除",
+        "赔偿金",
+        "经济补偿标准的二倍"
+      ],
+      "keywords_found": [
+        "违法解除",
+        "赔偿金"
+      ],
+      "keyword_hit_rate": 0.6666666666666666,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 0.3333333333333333,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 222.2,
+      "difficulty": "medium",
+      "error": null
+    },
+    {
+      "id": "general_003",
+      "query": "加班不给加班费怎么维权",
+      "intent_expected": "general",
+      "intent_predicted": "general",
+      "intent_correct": true,
+      "keywords_expected": [
+        "加班工资",
+        "劳动行政部门",
+        "仲裁"
+      ],
+      "keywords_found": [
+        "加班工资",
+        "劳动行政部门",
+        "仲裁"
+      ],
+      "keyword_hit_rate": 1.0,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 0.5,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 233.9,
+      "difficulty": "medium",
+      "error": null
+    },
+    {
+      "id": "general_004",
+      "query": "老板不签劳动合同咋办",
+      "intent_expected": "general",
+      "intent_predicted": "general",
+      "intent_correct": true,
+      "keywords_expected": [
+        "书面劳动合同",
+        "二倍的工资",
+        "超过一个月"
+      ],
+      "keywords_found": [
+        "书面劳动合同",
+        "超过一个月"
+      ],
+      "keyword_hit_rate": 0.6666666666666666,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 213.2,
+      "difficulty": "easy",
+      "error": null
+    },
+    {
+      "id": "general_005",
+      "query": "怀孕了能被开除吗",
+      "intent_expected": "general",
+      "intent_predicted": "general",
+      "intent_correct": true,
+      "keywords_expected": [
+        "孕期",
+        "哺乳期",
+        "不得依照本法第四十条"
+      ],
+      "keywords_found": [
+        "孕期"
+      ],
+      "keyword_hit_rate": 0.3333333333333333,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 0.3333333333333333,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 228.3,
+      "difficulty": "easy",
+      "error": null
+    },
+    {
+      "id": "general_006",
+      "query": "公司突然裁员我该怎么做",
+      "intent_expected": "general",
+      "intent_predicted": "general",
+      "intent_correct": true,
+      "keywords_expected": [
+        "经济性裁员",
+        "经济补偿",
+        "提前三十日"
+      ],
+      "keywords_found": [
+        "经济性裁员",
+        "提前三十日"
+      ],
+      "keyword_hit_rate": 0.6666666666666666,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 213.7,
+      "difficulty": "medium",
+      "error": null
+    },
+    {
+      "id": "general_007",
+      "query": "试用期被开除有补偿吗",
+      "intent_expected": "general",
+      "intent_predicted": "general",
+      "intent_correct": true,
+      "keywords_expected": [
+        "试用期",
+        "不符合录用条件",
+        "说明理由"
+      ],
+      "keywords_found": [
+        "试用期"
+      ],
+      "keyword_hit_rate": 0.3333333333333333,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 176.7,
+      "difficulty": "medium",
+      "error": null
+    },
+    {
+      "id": "general_008",
+      "query": "公司欠工资不发怎么办",
+      "intent_expected": "general",
+      "intent_predicted": "general",
+      "intent_correct": true,
+      "keywords_expected": [
+        "劳动报酬",
+        "责令限期支付",
+        "劳动行政部门"
+      ],
+      "keywords_found": [
+        "劳动报酬",
+        "劳动行政部门"
+      ],
+      "keyword_hit_rate": 0.6666666666666666,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 0.3333333333333333,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 226.0,
+      "difficulty": "easy",
+      "error": null
+    },
+    {
+      "id": "general_009",
+      "query": "离职后竞业限制期间公司不给补偿我能去竞争对手公司工作吗",
+      "intent_expected": "general",
+      "intent_predicted": "general",
+      "intent_correct": true,
+      "keywords_expected": [
+        "竞业限制",
+        "三个月未支付",
+        "解除竞业限制约定"
+      ],
+      "keywords_found": [
+        "竞业限制",
+        "三个月未支付",
+        "解除竞业限制约定"
+      ],
+      "keyword_hit_rate": 1.0,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 182.7,
+      "difficulty": "hard",
+      "error": null
+    },
+    {
+      "id": "general_010",
+      "query": "上班途中发生车祸算不算工伤",
+      "intent_expected": "general",
+      "intent_predicted": "general",
+      "intent_correct": true,
+      "keywords_expected": [
+        "上下班途中",
+        "交通事故",
+        "非本人主要责任"
+      ],
+      "keywords_found": [
+        "上下班途中",
+        "交通事故",
+        "非本人主要责任"
+      ],
+      "keyword_hit_rate": 1.0,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 264.2,
+      "difficulty": "easy",
+      "error": null
+    },
+    {
+      "id": "general_011",
+      "query": "劳动争议要先仲裁再起诉吗",
+      "intent_expected": "general",
+      "intent_predicted": "general",
+      "intent_correct": true,
+      "keywords_expected": [
+        "劳动争议",
+        "仲裁",
+        "诉讼"
+      ],
+      "keywords_found": [
+        "劳动争议",
+        "仲裁",
+        "诉讼"
+      ],
+      "keyword_hit_rate": 1.0,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 161.2,
+      "difficulty": "medium",
+      "error": null
+    },
+    {
+      "id": "general_012",
+      "query": "公司强迫我自愿离职不给补偿合法吗",
+      "intent_expected": "general",
+      "intent_predicted": "general",
+      "intent_correct": true,
+      "keywords_expected": [
+        "协商解除",
+        "经济补偿",
+        "劳动者解除"
+      ],
+      "keywords_found": [
+        "经济补偿",
+        "劳动者解除"
+      ],
+      "keyword_hit_rate": 0.6666666666666666,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 162.7,
+      "difficulty": "medium",
+      "error": null
+    },
+    {
+      "id": "general_013",
+      "query": "员工严重违反公司规章制度可以直接开除吗",
+      "intent_expected": "general",
+      "intent_predicted": "general",
+      "intent_correct": true,
+      "keywords_expected": [
+        "严重违反",
+        "规章制度",
+        "解除劳动合同"
+      ],
+      "keywords_found": [
+        "严重违反",
+        "规章制度",
+        "解除劳动合同"
+      ],
+      "keyword_hit_rate": 1.0,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 162.9,
+      "difficulty": "medium",
+      "error": null
+    },
+    {
+      "id": "general_014",
+      "query": "工资低于最低工资标准违法吗",
+      "intent_expected": "general",
+      "intent_predicted": "general",
+      "intent_correct": true,
+      "keywords_expected": [
+        "最低工资标准",
+        "省、自治区、直辖市",
+        "不得低于"
+      ],
+      "keywords_found": [
+        "最低工资标准",
+        "省、自治区、直辖市",
+        "不得低于"
+      ],
+      "keyword_hit_rate": 1.0,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 228.9,
+      "difficulty": "easy",
+      "error": null
+    },
+    {
+      "id": "general_015",
+      "query": "女工产假期间工资怎么算",
+      "intent_expected": "general",
+      "intent_predicted": "general",
+      "intent_correct": true,
+      "keywords_expected": [
+        "产期",
+        "生育保险",
+        "工资"
+      ],
+      "keywords_found": [
+        "生育保险",
+        "工资"
+      ],
+      "keyword_hit_rate": 0.6666666666666666,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 152.0,
+      "difficulty": "medium",
+      "error": null
+    },
+    {
+      "id": "hard_001",
+      "query": "劳动合同法第四十七条和第八十七条的关系是什么",
+      "intent_expected": "law_article",
+      "intent_predicted": "concept_explain",
+      "intent_correct": false,
+      "keywords_expected": [
+        "经济补偿",
+        "赔偿金",
+        "二倍"
+      ],
+      "keywords_found": [
+        "经济补偿",
+        "赔偿金",
+        "二倍"
+      ],
+      "keyword_hit_rate": 1.0,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 161.3,
+      "difficulty": "hard",
+      "error": null
+    },
+    {
+      "id": "hard_002",
+      "query": "劳动合同法第三十八条和第四十六条有什么联系",
+      "intent_expected": "law_article",
+      "intent_predicted": "general",
+      "intent_correct": false,
+      "keywords_expected": [
+        "劳动者解除劳动合同",
+        "经济补偿",
+        "未及时足额支付劳动报酬"
+      ],
+      "keywords_found": [
+        "经济补偿"
+      ],
+      "keyword_hit_rate": 0.3333333333333333,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 0.5,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 162.0,
+      "difficulty": "hard",
+      "error": null
+    },
+    {
+      "id": "hard_003",
+      "query": "年假",
+      "intent_expected": "concept_explain",
+      "intent_predicted": "general",
+      "intent_correct": false,
+      "keywords_expected": [
+        "年休假",
+        "带薪",
+        "5天"
+      ],
+      "keywords_found": [
+        "年休假",
+        "带薪"
+      ],
+      "keyword_hit_rate": 0.6666666666666666,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 0.3333333333333333,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 165.3,
+      "difficulty": "easy",
+      "error": null
+    },
+    {
+      "id": "hard_004",
+      "query": "劳动法第100条规定了什么",
+      "intent_expected": "law_article",
+      "intent_predicted": "law_article",
+      "intent_correct": true,
+      "keywords_expected": [
+        "劳动法"
+      ],
+      "keywords_found": [
+        "劳动法"
+      ],
+      "keyword_hit_rate": 1.0,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 301.0,
+      "difficulty": "hard",
+      "error": null
+    },
+    {
+      "id": "hard_005",
+      "query": "我是一名在外资企业工作了8年的销售经理，月薪3万，公司以业绩下滑为由要裁减我，请问公司需要提前多久通知我，需要给我多少赔偿，如果我不同意被裁可以怎么办",
+      "intent_expected": "general",
+      "intent_predicted": "general",
+      "intent_correct": true,
+      "keywords_expected": [
+        "经济性裁员",
+        "提前三十日",
+        "经济补偿",
+        "工作年限"
+      ],
+      "keywords_found": [
+        "经济性裁员",
+        "提前三十日"
+      ],
+      "keyword_hit_rate": 0.5,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 0.16666666666666666,
+      "recall_at_3": false,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 271.5,
+      "difficulty": "hard",
+      "error": null
+    },
+    {
+      "id": "hard_006",
+      "query": "劳动合同法第39条与第42条的适用关系如何理解",
+      "intent_expected": "law_article",
+      "intent_predicted": "law_article",
+      "intent_correct": true,
+      "keywords_expected": [
+        "严重违反",
+        "规章制度",
+        "孕期",
+        "医疗期内"
+      ],
+      "keywords_found": [],
+      "keyword_hit_rate": 0.0,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 0.0,
+      "recall_at_3": false,
+      "recall_at_6": false,
+      "num_docs_retrieved": 6,
+      "latency_ms": 304.3,
+      "difficulty": "hard",
+      "error": null
+    },
+    {
+      "id": "hard_007",
+      "query": "公司说我不胜任工作要辞退我",
+      "intent_expected": "general",
+      "intent_predicted": "general",
+      "intent_correct": true,
+      "keywords_expected": [
+        "不能胜任工作",
+        "培训",
+        "调整工作岗位",
+        "提前三十日"
+      ],
+      "keywords_found": [
+        "不能胜任工作",
+        "培训",
+        "调整工作岗位",
+        "提前三十日"
+      ],
+      "keyword_hit_rate": 1.0,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 1.0,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 165.7,
+      "difficulty": "medium",
+      "error": null
+    },
+    {
+      "id": "hard_008",
+      "query": "同一单位连续签了两次固定期限合同可以要求签无固定期限合同吗",
+      "intent_expected": "concept_explain",
+      "intent_predicted": "general",
+      "intent_correct": false,
+      "keywords_expected": [
+        "连续订立二次固定期限劳动合同",
+        "无固定期限劳动合同",
+        "续订"
+      ],
+      "keywords_found": [
+        "连续订立二次固定期限劳动合同",
+        "无固定期限劳动合同",
+        "续订"
+      ],
+      "keyword_hit_rate": 1.0,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 0.5,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 169.2,
+      "difficulty": "medium",
+      "error": null
+    },
+    {
+      "id": "hard_009",
+      "query": "工资能用实物代替货币发放吗",
+      "intent_expected": "general",
+      "intent_predicted": "general",
+      "intent_correct": true,
+      "keywords_expected": [
+        "货币形式",
+        "按月支付",
+        "克扣"
+      ],
+      "keywords_found": [
+        "货币形式",
+        "按月支付",
+        "克扣"
+      ],
+      "keyword_hit_rate": 1.0,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 0.3333333333333333,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 169.8,
+      "difficulty": "medium",
+      "error": null
+    },
+    {
+      "id": "hard_010",
+      "query": "入职超过一年没有签劳动合同，公司和我之间是什么关系",
+      "intent_expected": "concept_explain",
+      "intent_predicted": "concept_explain",
+      "intent_correct": true,
+      "keywords_expected": [
+        "无固定期限劳动合同",
+        "视为",
+        "满一年"
+      ],
+      "keywords_found": [
+        "无固定期限劳动合同",
+        "视为",
+        "满一年"
+      ],
+      "keyword_hit_rate": 1.0,
+      "expected_source": "",
+      "source_found": true,
+      "mrr": 0.5,
+      "recall_at_3": true,
+      "recall_at_6": true,
+      "num_docs_retrieved": 6,
+      "latency_ms": 173.0,
+      "difficulty": "hard",
+      "error": null
+    }
+  ]
+}

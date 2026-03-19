@@ -48,7 +48,7 @@ class Settings(BaseSettings):
     ollama_base_url: str = Field(default="http://127.0.0.1:11434", description="Ollama Base URL")
     ollama_api_key: Optional[str] = Field(default=None, description="Ollama API Key（如不需要可为空）")
     ollama_embedding_model: str = Field(default="qwen3-embedding:4b", description="Ollama Embedding 模型")
-    ollama_qwen_model: str = Field(default="qwen2.5:7b-instruct", description="Ollama Qwen 聊天模型")
+    ollama_qwen_model: str = Field(default="qwen3.5:9b", description="Ollama Qwen 聊天模型")
     ollama_qwen_url: Optional[str] = Field(default=None, description="Ollama Qwen 服务地址（为空则使用 ollama_base_url）")
     mlx_model_path: Optional[str] = Field(default=None, description="MLX 本地聊天模型目录")
     mlx_max_tokens: int = Field(default=2000, ge=1, le=8192, description="MLX 生成最大 token 数")

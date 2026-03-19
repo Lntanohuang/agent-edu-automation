@@ -1,7 +1,11 @@
 """Skills 自动发现注册中心。
 
 扫描 skills/ 子目录，导入每个 ``skill.py`` 中导出的 ``config: SkillConfig`` 对象，
-自动生成 Skill 实例。新增技能只需创建子目录并定义 ``config``，无需修改此文件。
+自动生成 Skill 或 SkillAgent 实例。新增技能只需创建子目录并定义 ``config``，
+无需修改此文件。
+
+优先级：若 skill.py 中导出了 ``agent: SkillAgent``，则直接使用；
+否则回退到旧的 ``Skill(config)`` 包装。
 """
 
 from __future__ import annotations
@@ -10,7 +14,7 @@ import importlib
 import logging
 from functools import lru_cache
 from pathlib import Path
-from typing import Dict
+from typing import Any, Dict
 
 from app.skills.base import Skill
 from app.skills.skill_config import SkillConfig
@@ -43,6 +47,21 @@ def discover_skill_configs() -> Dict[str, SkillConfig]:
     return configs
 
 
-def get_registered_skills() -> Dict[str, Skill]:
-    """返回已注册的 Skill 实例字典（按 name 索引）。"""
-    return {name: Skill(cfg) for name, cfg in discover_skill_configs().items()}
+def get_registered_skills() -> Dict[str, Any]:
+    """返回已注册的 Skill 实例字典。优先使用 SkillAgent，否则回退到 Skill。"""
+    result: Dict[str, Any] = {}
+    for name, cfg in discover_skill_configs().items():
+        # 尝试获取 skill module 中定义的 SkillAgent
+        module_name = f"app.skills.{name}.skill"
+        try:
+            mod = importlib.import_module(module_name)
+            agent_instance = getattr(mod, "agent", None)
+            if agent_instance is not None:
+                result[name] = agent_instance
+                logger.debug("使用 SkillAgent: %s", name)
+                continue
+        except ImportError:
+            pass
+        result[name] = Skill(cfg)
+        logger.debug("使用 Skill (fallback): %s", name)
+    return result

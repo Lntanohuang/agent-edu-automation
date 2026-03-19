@@ -42,3 +42,15 @@ config = SkillConfig(
     ],
     confidence_with_docs="high",
 )
+
+from app.skills.skill_agent import RetrievalStrategy, SkillAgent  # noqa: E402
+
+# 法条解析的专属检索策略
+retrieval_strategy = RetrievalStrategy(
+    k=4,  # 精确查询不需要太多文档
+    bm25_weight_override=0.7,  # 重 BM25，精确匹配优先
+    metadata_filters={"doc_type": "statute"},
+    use_hyde=False,  # 法条查询不需要 HyDE
+)
+
+agent = SkillAgent(config, retrieval_strategy)
