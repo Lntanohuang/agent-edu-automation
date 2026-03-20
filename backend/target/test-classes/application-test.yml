@@ -1,0 +1,94 @@
+server:
+  port: 0
+
+spring:
+  main:
+    allow-bean-definition-overriding: true
+  application:
+    name: edu-platform-test
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.mongo.MongoRepositoriesAutoConfiguration
+
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;NON_KEYWORDS=VALUE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: false
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password:
+      database: 1
+      timeout: 5000
+      lettuce:
+        pool:
+          max-active: 5
+          max-idle: 2
+          min-idle: 1
+          max-wait: 1000ms
+
+    mongodb:
+      uri: mongodb://localhost:27017/edu_platform_test
+
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+    virtual-host: /
+    listener:
+      simple:
+        acknowledge-mode: auto
+        concurrency: 1
+        max-concurrency: 2
+        prefetch: 10
+
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 20MB
+
+logging:
+  level:
+    com.edu.platform: INFO
+    org.springframework.amqp: DEBUG
+    org.springframework.data.redis: DEBUG
+
+ai:
+  service:
+    url: http://localhost:8000
+    timeout: 5000
+    api-key: test-key
+
+chat:
+  context:
+    history-window: 10
+    ttl-days: 1
+  reply:
+    timeout-ms: 10000
+
+jwt:
+  secret: test-secret-key-for-unit-tests-must-be-32-chars!!
+  expiration: 3600000
+  refresh-expiration: 86400000
+
+cors:
+  allowed-origins: http://localhost:3000
+  allowed-methods: GET,POST,PUT,DELETE,OPTIONS
+  allowed-headers: "*"
+  allow-credentials: true

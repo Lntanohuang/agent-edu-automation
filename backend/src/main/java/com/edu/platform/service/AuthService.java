@@ -8,6 +8,7 @@ import com.edu.platform.repository.UserRepository;
 import com.edu.platform.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -153,6 +154,7 @@ public class AuthService {
     /**
      * 获取当前用户信息
      */
+    @Cacheable(value = "user", key = "#userId")
     public LoginResponse.UserInfo getCurrentUser(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(404, "用户不存在"));

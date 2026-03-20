@@ -42,7 +42,9 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/api/auth/login",
                     "/api/auth/register",
-                    "/api/auth/refresh"
+                    "/api/auth/refresh",
+                    "/ws/chat",
+                    "/ws/chat/**"
                 ).permitAll()
                 // 健康检查
                 .requestMatchers("/actuator/health").permitAll()

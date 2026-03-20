@@ -1,14 +1,16 @@
 package com.edu.platform.dto;
 
 import com.edu.platform.entity.User;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.List;
 
 /**
  * 登录响应 DTO
- * 
+ *
  * 响应示例:
  * {
  *   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -26,6 +28,8 @@ import java.util.List;
  */
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class LoginResponse {
 
     private String token;
@@ -35,6 +39,8 @@ public class LoginResponse {
 
     @Data
     @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class UserInfo {
         private Long id;
         private String username;
