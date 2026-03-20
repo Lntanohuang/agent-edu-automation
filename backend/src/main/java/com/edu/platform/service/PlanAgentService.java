@@ -5,6 +5,7 @@ import com.alibaba.fastjson2.JSONObject;
 import com.edu.platform.common.BusinessException;
 import com.edu.platform.dto.PlanAgentGenerateRequest;
 import com.edu.platform.dto.PlanAgentGenerateResponse;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -26,6 +27,7 @@ public class PlanAgentService {
     @Value("${ai.service.url}")
     private String aiServiceUrl;
 
+    @CircuitBreaker(name = "aiService", fallbackMethod = "generatePlanFallback")
     public PlanAgentGenerateResponse generatePlan(PlanAgentGenerateRequest request) {
         try {
             HttpHeaders headers = new HttpHeaders();
@@ -87,5 +89,14 @@ public class PlanAgentService {
             }
             throw new BusinessException(503, "教案服务暂时不可用，请稍后再试");
         }
+    }
+
+    private PlanAgentGenerateResponse generatePlanFallback(PlanAgentGenerateRequest request, Throwable ex) {
+        log.warn("教案 AI 服务熔断降级, topic={}, error={}", request.getTopic(), ex.getMessage());
+        return PlanAgentGenerateResponse.builder()
+                .success(false)
+                .message("AI 服务暂时不可用，请稍后重试")
+                .semesterPlan(Map.of())
+                .build();
     }
 }

@@ -4,6 +4,7 @@ import com.edu.platform.common.Result;
 import com.edu.platform.dto.*;
 import com.edu.platform.service.ChatService;
 import com.edu.platform.util.JwtUtil;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -70,6 +71,7 @@ public class ChatController {
      *   "message": "对话不存在"
      * }
      */
+    @RateLimiter(name = "chatApi")
     @PostMapping("/message")
     public Result<ChatMessageResponse> sendMessage(
             @RequestHeader("Authorization") String authHeader,

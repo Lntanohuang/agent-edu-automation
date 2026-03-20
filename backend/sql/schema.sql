@@ -242,6 +242,61 @@ CREATE TABLE system_configs (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统配置表';
 
 -- ============================================
+-- 9. 出题草稿表 (question_generation_drafts)
+-- ============================================
+CREATE TABLE question_generation_drafts (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '草稿ID',
+    user_id BIGINT NOT NULL COMMENT '教师用户ID',
+    title VARCHAR(200) NOT NULL COMMENT '草稿标题',
+    subject VARCHAR(50) NOT NULL COMMENT '学科',
+    topic VARCHAR(200) COMMENT '主题',
+    textbook_scope JSON COMMENT '教材范围标签',
+    generation_mode ENUM('practice', 'paper') DEFAULT 'practice' COMMENT '生成模式: 练习/试卷',
+    question_count INT DEFAULT 0 COMMENT '题目数量',
+    total_score INT DEFAULT 100 COMMENT '总分',
+    review_status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending' COMMENT '审核状态',
+    ai_payload LONGTEXT COMMENT 'AI返回的结构化题目内容',
+    review_note VARCHAR(500) COMMENT '审核备注',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+
+    INDEX idx_qgd_user_id (user_id),
+    INDEX idx_qgd_status (review_status),
+    INDEX idx_qgd_created_at (created_at),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='智能出题草稿表';
+
+-- ============================================
+-- 10. 题库题目表 (question_bank_items)
+-- ============================================
+CREATE TABLE question_bank_items (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '题目ID',
+    draft_id BIGINT NOT NULL COMMENT '来源草稿ID',
+    user_id BIGINT NOT NULL COMMENT '教师用户ID',
+    subject VARCHAR(50) NOT NULL COMMENT '学科',
+    question_type VARCHAR(50) NOT NULL COMMENT '题型',
+    difficulty VARCHAR(20) COMMENT '难度',
+    stem TEXT NOT NULL COMMENT '题干',
+    options_json JSON COMMENT '选项',
+    answer_text TEXT NOT NULL COMMENT '答案',
+    explanation TEXT NOT NULL COMMENT '解析',
+    knowledge_points JSON COMMENT '知识点',
+    source_citations JSON COMMENT '出处引用',
+    score DECIMAL(8,2) DEFAULT 0 COMMENT '分值',
+    status ENUM('active', 'inactive') DEFAULT 'active' COMMENT '题目状态',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+
+    INDEX idx_qbi_user_id (user_id),
+    INDEX idx_qbi_draft_id (draft_id),
+    INDEX idx_qbi_subject (subject),
+    INDEX idx_qbi_status (status),
+    INDEX idx_qbi_created_at (created_at),
+    FOREIGN KEY (draft_id) REFERENCES question_generation_drafts(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='题库题目表';
+
+-- ============================================
 -- 插入默认管理员账号 (密码: admin123)
 -- ============================================
 -- 密码: admin123 (BCrypt)
@@ -259,9 +314,47 @@ INSERT INTO users (username, password, nickname, role, subjects, status) VALUES
 -- ============================================
 -- 插入系统配置
 -- ============================================
+-- ============================================
+-- 11. AI反馈表 (ai_feedbacks)
+-- ============================================
+CREATE TABLE ai_feedbacks (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '反馈ID',
+    user_id BIGINT NOT NULL COMMENT '用户ID',
+    conversation_id VARCHAR(100) COMMENT '对话ID',
+    message_id VARCHAR(100) COMMENT '消息ID',
+    rating ENUM('helpful', 'not_helpful') NOT NULL COMMENT '评价',
+    comment TEXT COMMENT '评论',
+    confidence VARCHAR(50) COMMENT '置信度',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+
+    extend_field1 VARCHAR(255) DEFAULT NULL COMMENT '预留字段1',
+    extend_field2 VARCHAR(255) DEFAULT NULL COMMENT '预留字段2',
+    extend_field3 VARCHAR(255) DEFAULT NULL COMMENT '预留字段3',
+    extend_field4 VARCHAR(255) DEFAULT NULL COMMENT '预留字段4',
+    extend_field5 VARCHAR(255) DEFAULT NULL COMMENT '预留字段5',
+
+    INDEX idx_user_id (user_id),
+    INDEX idx_created_at (created_at),
+    UNIQUE INDEX uk_user_message (user_id, message_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI反馈表';
+
+-- ============================================
+-- 插入系统配置
+-- ============================================
 INSERT INTO system_configs (config_key, config_value, description) VALUES
 ('ai.model.default', 'gpt-4', '默认AI模型'),
 ('ai.temperature', '0.7', 'AI温度参数'),
 ('ai.max_tokens', '2000', '最大token数'),
 ('file.max_size', '52428850', '文件最大大小(50MB)'),
 ('grading.batch_size', '10', '批量批阅并发数');
+
+-- ============================================
+-- 性能优化：高并发联合索引
+-- ============================================
+
+-- conversations 表：用户对话列表分页查询（user_id + updated_at 联合）
+ALTER TABLE conversations ADD INDEX idx_user_updated (user_id, updated_at);
+
+-- messages 表：对话消息列表查询（conversation_id + created_at 联合）
+ALTER TABLE messages ADD INDEX idx_conv_created (conversation_id, created_at);

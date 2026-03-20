@@ -1,8 +1,10 @@
 package com.edu.platform.service;
 
 import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONObject;
+import com.edu.platform.chat.event.UserChatMessageEvent;
+import com.edu.platform.chat.service.ChatContextCacheService;
+import com.edu.platform.chat.service.ChatEventPublisher;
+import com.edu.platform.chat.service.ChatPendingReplyRegistry;
 import com.edu.platform.common.BusinessException;
 import com.edu.platform.dto.ChatMessageRequest;
 import com.edu.platform.dto.ChatMessageResponse;
@@ -17,17 +19,17 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
 
-import java.util.HashMap;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 @Slf4j
 @Service
@@ -36,30 +38,45 @@ public class ChatService {
 
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
-    private final RestTemplate restTemplate = new RestTemplate();
-    private static final int HISTORY_LIMIT = 20;
-    private static final int MAX_HISTORY_TOKENS = 512;
+    private final ChatEventPublisher chatEventPublisher;
+    private final ChatPendingReplyRegistry pendingReplyRegistry;
+    private final ChatContextCacheService cacheService;
 
-    @Value("${ai.service.url}")
-    private String aiServiceUrl;
+    @Value("${chat.reply.timeout-ms:60000}")
+    private long replyTimeoutMs;
 
     /**
-     * 同步发送消息并获取 AI 回复
+     * 发送消息：
+     * 1. API 层只校验会话并投递用户消息事件
+     * 2. 由 MQ 消费者异步调模型并落库
+     * 3. 同步等待一段时间以兼容现有前端请求-响应模式
      */
     @Transactional
     public ChatMessageResponse sendMessage(Long userId, ChatMessageRequest request) {
-        ConversationContext context = resolveConversationContext(userId, request);
-        Conversation conversation = context.conversation();
+        Conversation conversation = resolveConversation(userId, request);
+        UserChatMessageEvent event = buildEvent(userId, conversation.getId(), request);
 
-        saveUserMessage(conversation.getId(), request.getMessage());
-        conversationRepository.incrementMessageCount(conversation.getId());
-
-        AiServiceReply aiReply = callAiService(request.getMessage(), conversation.getId(), context.historyMessages());
-
-        Message aiMessage = saveAssistantMessage(conversation.getId(), aiReply);
-        conversationRepository.incrementMessageCount(conversation.getId());
-
-        return toResponse(aiMessage, aiReply);
+        CompletableFuture<ChatMessageResponse> pendingReply = pendingReplyRegistry.register(event.getRequestId());
+        try {
+            chatEventPublisher.publishUserMessage(event);
+            return pendingReply.get(replyTimeoutMs, TimeUnit.MILLISECONDS);
+        } catch (TimeoutException timeoutException) {
+            log.warn("等待 AI 回复超时: requestId={}, conversationId={}",
+                    event.getRequestId(), conversation.getId());
+            return buildPendingResponse(conversation.getId());
+        } catch (InterruptedException interruptedException) {
+            Thread.currentThread().interrupt();
+            throw new BusinessException(500, "请求处理中断，请重试");
+        } catch (ExecutionException executionException) {
+            Throwable cause = executionException.getCause();
+            if (cause instanceof BusinessException businessException) {
+                throw businessException;
+            }
+            log.error("异步回复处理失败: requestId={}", event.getRequestId(), executionException);
+            throw new BusinessException(503, "AI 服务暂时不可用，请稍后再试");
+        } finally {
+            pendingReplyRegistry.cleanup(event.getRequestId());
+        }
     }
 
     /**
@@ -121,6 +138,7 @@ public class ChatService {
 
         messageRepository.deleteByConversationId(conversationId);
         conversationRepository.deleteById(conversationId);
+        cacheService.clearConversation(conversationId);
     }
 
     /**
@@ -136,150 +154,52 @@ public class ChatService {
         }
 
         messageRepository.deleteByConversationId(conversationId);
+        cacheService.clearConversation(conversationId);
     }
 
-    /**
-     * 同步调用 AI 服务
-     */
-    private AiServiceReply callAiService(String message, Long conversationId, List<Message> historyMessages) {
-        try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-
-            HttpEntity<Map<String, Object>> entity =
-                    new HttpEntity<>(buildAiRequestBody(message, conversationId, historyMessages), headers);
-            ResponseEntity<String> response = restTemplate.postForEntity(
-                    aiServiceUrl + "/rag/agent/chat",
-                    entity,
-                    String.class
-            );
-
-            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
-                throw new BusinessException(503, "AI 服务响应异常");
-            }
-
-            JSONObject obj = JSON.parseObject(response.getBody());
-            if (obj == null) {
-                throw new BusinessException(503, "AI 服务返回为空");
-            }
-
-            Boolean success = obj.getBoolean("success");
-            if (Boolean.FALSE.equals(success)) {
-                String error = obj.getString("error");
-                String messageText = obj.getString("message");
-                throw new BusinessException(503, "AI 服务失败: " + (error != null ? error : messageText));
-            }
-
-            String answer = obj.getString("answer") == null ? "" : obj.getString("answer").trim();
-            if (answer.isEmpty()) {
-                throw new BusinessException(503, "AI 服务返回空内容");
-            }
-
-            return new AiServiceReply(
-                    answer,
-                    obj.getString("skill_used"),
-                    toStringList(obj.getJSONArray("sources")),
-                    toStringList(obj.getJSONArray("exploration_tasks")),
-                    toStringList(obj.getJSONArray("book_labels")),
-                    obj.getString("confidence"),
-                    toStringList(obj.getJSONArray("audit_notes"))
-            );
-        } catch (Exception e) {
-            log.error("调用 AI 服务失败", e);
-            if (e instanceof BusinessException businessException) {
-                throw businessException;
-            }
-            throw new BusinessException(503, "AI 服务暂时不可用，请稍后再试");
-        }
-    }
-
-    private ConversationContext resolveConversationContext(Long userId, ChatMessageRequest request) {
-        Conversation conversation;
-        List<Message> historyMessages = List.of();
-
+    private Conversation resolveConversation(Long userId, ChatMessageRequest request) {
         if (request.getConversationId() != null) {
-            conversation = conversationRepository.findById(request.getConversationId())
+            Conversation conversation = conversationRepository.findById(request.getConversationId())
                     .orElseThrow(() -> new BusinessException(404, "对话不存在"));
             if (!conversation.getUserId().equals(userId)) {
                 throw new BusinessException(403, "无权访问该对话");
             }
-            historyMessages = messageRepository.findRecentMessages(conversation.getId(), HISTORY_LIMIT);
-        } else {
-            conversation = new Conversation();
-            conversation.setUserId(userId);
-            conversation.setTitle(generateTitle(request.getMessage()));
-            conversation.setContext(request.getContext() != null ? JSON.toJSONString(request.getContext()) : null);
-            conversation.setStatus(Conversation.Status.active);
-            conversationRepository.save(conversation);
+            return conversation;
         }
 
-        return new ConversationContext(conversation, historyMessages);
+        Conversation conversation = new Conversation();
+        conversation.setUserId(userId);
+        conversation.setTitle(generateTitle(request.getMessage()));
+        conversation.setContext(request.getContext() != null ? JSON.toJSONString(request.getContext()) : null);
+        conversation.setStatus(Conversation.Status.active);
+        return conversationRepository.save(conversation);
     }
 
-    private void saveUserMessage(Long conversationId, String content) {
-        Message userMessage = new Message();
-        userMessage.setConversationId(conversationId);
-        userMessage.setRole(Message.Role.user);
-        userMessage.setContent(content);
-        messageRepository.save(userMessage);
-    }
-
-    private Message saveAssistantMessage(Long conversationId, AiServiceReply aiReply) {
-        if (aiReply.answer() == null || aiReply.answer().trim().isEmpty()) {
-            throw new BusinessException(503, "AI 返回空内容，未写入会话");
-        }
-        Message aiMessage = new Message();
-        aiMessage.setConversationId(conversationId);
-        aiMessage.setRole(Message.Role.assistant);
-        aiMessage.setContent(aiReply.answer());
-        aiMessage.setTokensUsed(aiReply.answer() == null ? 0 : aiReply.answer().length() / 2);
-        Map<String, Object> metadata = new HashMap<>();
-        metadata.put("skill_used", aiReply.skillUsed());
-        metadata.put("sources", aiReply.sources());
-        metadata.put("book_labels", aiReply.bookLabels());
-        metadata.put("confidence", aiReply.confidence());
-        metadata.put("audit_notes", aiReply.auditNotes());
-        aiMessage.setMetadata(JSON.toJSONString(metadata));
-        return messageRepository.save(aiMessage);
-    }
-
-    private ChatMessageResponse toResponse(Message aiMessage, AiServiceReply aiReply) {
-        return ChatMessageResponse.builder()
-                .messageId(aiMessage.getId())
-                .conversationId(aiMessage.getConversationId())
-                .content(aiReply.answer())
-                .role("assistant")
-                .timestamp(aiMessage.getCreatedAt())
-                .tokens(aiMessage.getTokensUsed())
-                .skillUsed(aiReply.skillUsed())
-                .sources(aiReply.sources())
-                .explorationTasks(aiReply.explorationTasks())
-                .bookLabels(aiReply.bookLabels())
-                .confidence(aiReply.confidence())
-                .auditNotes(aiReply.auditNotes())
+    private UserChatMessageEvent buildEvent(Long userId, Long conversationId, ChatMessageRequest request) {
+        return UserChatMessageEvent.builder()
+                .eventId(UUID.randomUUID().toString())
+                .requestId(UUID.randomUUID().toString())
+                .traceId(UUID.randomUUID().toString())
+                .conversationId(conversationId)
+                .userId(userId)
+                .message(request.getMessage())
+                .context(request.getContext() == null ? Map.of() : request.getContext())
+                .timestamp(System.currentTimeMillis())
                 .build();
     }
 
-    private Map<String, Object> buildAiRequestBody(String message, Long conversationId, List<Message> historyMessages) {
-        List<Map<String, String>> history = historyMessages.stream()
-                .map(msg -> Map.of(
-                        "role", msg.getRole() == Message.Role.assistant ? "assistant" : "user",
-                        "content", msg.getContent()
-                ))
-                .toList();
-        Map<String, Object> body = new HashMap<>();
-        body.put("query", message);
-        body.put("conversation_id", String.valueOf(conversationId));
-        body.put("history", history);
-        body.put("max_history_tokens", MAX_HISTORY_TOKENS);
-        return body;
-    }
-
-    private List<String> toStringList(JSONArray array) {
-        if (array == null || array.isEmpty()) {
-            return List.of();
-        }
-        return array.stream().map(String::valueOf).toList();
+    private ChatMessageResponse buildPendingResponse(Long conversationId) {
+        return ChatMessageResponse.builder()
+                .conversationId(conversationId)
+                .role("assistant")
+                .content("消息已接收，正在生成中，请稍后刷新会话查看结果。")
+                .timestamp(LocalDateTime.now())
+                .tokens(0)
+                .sources(List.of())
+                .explorationTasks(List.of())
+                .bookLabels(List.of())
+                .auditNotes(List.of())
+                .build();
     }
 
     private String generateTitle(String message) {
@@ -288,16 +208,4 @@ public class ChatService {
         }
         return message.substring(0, 20) + "...";
     }
-
-    private record ConversationContext(Conversation conversation, List<Message> historyMessages) {}
-
-    private record AiServiceReply(
-            String answer,
-            String skillUsed,
-            List<String> sources,
-            List<String> explorationTasks,
-            List<String> bookLabels,
-            String confidence,
-            List<String> auditNotes
-    ) {}
 }

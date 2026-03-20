@@ -4,6 +4,7 @@ import com.edu.platform.common.Result;
 import com.edu.platform.dto.*;
 import com.edu.platform.service.AuthService;
 import com.edu.platform.util.JwtUtil;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -71,6 +72,7 @@ public class AuthController {
      *   "timestamp": "2024-01-15T10:30:00"
      * }
      */
+    @RateLimiter(name = "authApi")
     @PostMapping("/login")
     public Result<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         return Result.success(authService.login(request));
@@ -135,6 +137,7 @@ public class AuthController {
      *   "message": "刷新令牌无效或已过期"
      * }
      */
+    @RateLimiter(name = "authApi")
     @PostMapping("/refresh")
     public Result<LoginResponse> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
         return Result.success(authService.refreshToken(request));
