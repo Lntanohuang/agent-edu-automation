@@ -1,16 +1,13 @@
 """
 多路混合检索器：BM25 + Dense 向量 + 规则召回 + Metadata Filter。
 
-路 1: BM25        — 法条名、术语、案号精确匹配
-路 2: Dense 向量   — 语义相似表达
-路 3: Metadata filter — 特定 doc_type / 法域
-路 4: 规则召回     — "劳动合同法第47条" 直接查 chunk metadata
+v3: 动态 RRF 权重、jieba 行业词典、法条引用扩展、同义词扩展查询。
 """
 
 import hashlib
 import time
 import threading
-from functools import lru_cache
+from pathlib import Path
 from typing import List, Optional
 
 import jieba
@@ -25,6 +22,12 @@ from app.retrieval.metrics import RetrievalMetrics, log_retrieval_metrics
 from app.retrieval.hyde import generate_hypothetical_document_sync
 
 logger = get_logger(__name__)
+
+# ── 加载 jieba 行业词典 ──
+_DICT_PATH = Path(__file__).resolve().parent.parent.parent / "data" / "jieba_legal_dict.txt"
+if _DICT_PATH.exists():
+    jieba.load_userdict(str(_DICT_PATH))
+    logger.info("jieba 行业词典已加载", dict_path=str(_DICT_PATH))
 
 
 class HybridRetriever:
@@ -41,6 +44,7 @@ class HybridRetriever:
         self._bm25_corpus: List[List[str]] = []
         self._lock = threading.Lock()
         self._index_hash: Optional[str] = None
+        self._reference_graph = None  # 延迟初始化
 
     def _build_bm25_index(self) -> None:
         """从 ChromaDB 加载全部文档，构建 BM25 索引。"""
@@ -51,7 +55,6 @@ class HybridRetriever:
             collection = vector_store._collection
             result = collection.get(include=["documents", "metadatas"])
         except Exception:
-            # fallback: 通过 Chroma 的 get() 方法
             result = vector_store.get(include=["documents", "metadatas"])
 
         documents_text = result.get("documents", []) or []
@@ -67,7 +70,6 @@ class HybridRetriever:
             meta = metadatas[i] if i < len(metadatas) else {}
             doc = Document(page_content=text, metadata={**meta, "_chroma_id": ids[i] if i < len(ids) else ""})
             docs.append(doc)
-            # jieba 分词用于 BM25
             tokens = list(jieba.cut(text))
             corpus.append(tokens)
 
@@ -87,6 +89,27 @@ class HybridRetriever:
             elapsed_ms=round(elapsed, 1),
         )
 
+        # 构建法条引用图
+        self._build_reference_graph()
+
+    def _build_reference_graph(self) -> None:
+        """从已加载的文档构建法条引用图。"""
+        try:
+            from app.rag.legal_reference_graph import get_reference_graph
+            graph = get_reference_graph()
+            if not graph.is_built and self._bm25_docs:
+                ref_count = graph.build_from_chunks(self._bm25_docs)
+                stats = graph.stats()
+                logger.info(
+                    "法条引用图构建完成",
+                    ref_count=ref_count,
+                    unique_articles=stats["unique_articles"],
+                )
+            self._reference_graph = graph
+        except Exception as exc:
+            logger.warning("法条引用图构建失败: %s", str(exc))
+            self._reference_graph = None
+
     def _ensure_bm25(self) -> None:
         """确保 BM25 索引已构建。"""
         if self._bm25 is None:
@@ -101,6 +124,7 @@ class HybridRetriever:
             self._bm25_docs = []
             self._bm25_corpus = []
             self._index_hash = None
+            self._reference_graph = None
         logger.info("BM25 索引已失效，下次检索时重建")
 
     def _bm25_search(self, query: str, k: int) -> List[Document]:
@@ -112,13 +136,11 @@ class HybridRetriever:
         tokens = list(jieba.cut(query))
         scores = self._bm25.get_scores(tokens)
 
-        # 取 top-k
         scored_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:k]
         results = []
         for idx in scored_indices:
             if scores[idx] > 0:
                 doc = self._bm25_docs[idx]
-                # 在 metadata 中记录 BM25 分数
                 doc_copy = Document(
                     page_content=doc.page_content,
                     metadata={**doc.metadata, "_bm25_score": float(scores[idx])},
@@ -135,7 +157,6 @@ class HybridRetriever:
         """用 HyDE 假设文档做向量检索。"""
         vector_store = get_rag_vector_store()
         docs = vector_store.similarity_search(hypothesis, k=k)
-        # 标记来源为 HyDE
         for doc in docs:
             doc.metadata["_retrieval_source"] = "hyde"
         return docs
@@ -153,11 +174,7 @@ class HybridRetriever:
             return []
 
     def _rule_recall(self, analysis: QueryAnalysis) -> List[Document]:
-        """
-        规则召回：根据实体精确匹配 chunk metadata。
-
-        例如 "劳动合同法第47条" → 查找 metadata 中包含 article_no=47 的 chunks。
-        """
+        """规则召回：根据实体精确匹配 chunk metadata。"""
         entities = analysis.entities
         if not entities.get("law_name") and not entities.get("article_no"):
             return []
@@ -171,7 +188,6 @@ class HybridRetriever:
             content = doc.page_content or ""
             meta = doc.metadata or {}
 
-            # 精确匹配：metadata 或内容中包含法律名和条号
             name_match = law_name and (
                 law_name in str(meta.get("law_name", ""))
                 or law_name in str(meta.get("filename", ""))
@@ -188,11 +204,59 @@ class HybridRetriever:
             elif article_match and not law_name:
                 results.append(doc)
             elif name_match and not article_no:
-                # 仅匹配法律名但无条号，降低优先级，只取前几条
                 if len(results) < 3:
                     results.append(doc)
 
         return results
+
+    def _rule_recall_by_ref(self, law_name: str, article_no: str) -> List[Document]:
+        """精确召回指定法律名+条号的文档（用于引用扩展）。"""
+        self._ensure_bm25()
+        results = []
+        for doc in self._bm25_docs:
+            content = doc.page_content or ""
+            meta = doc.metadata or {}
+            name_match = (
+                law_name in str(meta.get("law_name", ""))
+                or law_name in content[:200]
+            )
+            article_match = (
+                str(meta.get("article_no", "")) == article_no
+                or f"第{article_no}条" in content
+            )
+            if name_match and article_match:
+                results.append(doc)
+        return results
+
+    def _expand_references(self, analysis: QueryAnalysis) -> List[Document]:
+        """法条引用扩展：查找当前法条引用/被引用的关联法条。"""
+        if self._reference_graph is None or not self._reference_graph.is_built:
+            return []
+
+        law_name = analysis.entities.get("law_name", "")
+        article_no = analysis.entities.get("article_no", "")
+        if not law_name or not article_no:
+            return []
+
+        refs = self._reference_graph.expand(law_name, article_no, depth=1)
+        if not refs:
+            return []
+
+        expanded_docs: List[Document] = []
+        for ref_law, ref_art in refs[:5]:  # 最多扩展 5 个引用
+            ref_docs = self._rule_recall_by_ref(ref_law, ref_art)
+            for d in ref_docs[:1]:  # 每个引用取 1 个最佳 chunk
+                d_copy = Document(
+                    page_content=d.page_content,
+                    metadata={**d.metadata, "_expansion": "reference"},
+                )
+                expanded_docs.append(d_copy)
+
+        if expanded_docs:
+            logger.info("法条引用扩展", count=len(expanded_docs),
+                        refs=[(r[0], r[1]) for r in refs[:5]])
+
+        return expanded_docs
 
     def _dedup_docs(self, all_docs: List[Document]) -> List[Document]:
         """基于内容 hash 去重。"""
@@ -206,14 +270,12 @@ class HybridRetriever:
         return unique
 
     def _rrf_fusion(self, doc_lists: list[list[Document]], weights: list[float], k_rrf: int = 60) -> list[Document]:
-        """
-        RRF 融合多路召回结果。
+        """RRF 融合多路召回结果。
 
         RRF_score(d) = Σ weight_i / (k + rank_i(d))
-        k=60 是业界常用值。
         """
-        scores: dict[str, float] = {}  # content_hash -> score
-        doc_map: dict[str, Document] = {}  # content_hash -> Document
+        scores: dict[str, float] = {}
+        doc_map: dict[str, Document] = {}
 
         for doc_list, weight in zip(doc_lists, weights):
             for rank, doc in enumerate(doc_list):
@@ -234,47 +296,43 @@ class HybridRetriever:
         """
         多路混合检索主入口。
 
-        1. 并行执行 BM25 / Dense / Metadata / Rule 四路召回
-        2. RRF 风格融合（按 bm25_boost 调权）
-        3. 去重
-        4. Rerank 重排序
+        1. BM25 / Dense / Metadata / Rule 四路召回
+        2. 动态 RRF 权重融合（由 analysis.rrf_weights 驱动）
+        3. 法条引用扩展（law_article 意图）
+        4. 去重 + Rerank (含 MMR 多样性)
         5. 记录检索指标
-
-        Args:
-            query: 用户查询
-            analysis: QueryAnalysis 分析结果
-            k: 最终返回文档数
-
-        Returns:
-            排序后的 Document 列表
         """
         metrics = RetrievalMetrics(query=query, intent=analysis.intent)
         latency: dict = {}
 
-        # ── 路 1: BM25 ──
+        # 使用同义词扩展后的 query 做 dense 检索
+        dense_query = analysis.expanded_query or query
+
+        # 从 analysis 获取动态 RRF 权重
+        w = analysis.rrf_weights
+
+        # ── 路 1: BM25（用原始 query，精确词匹配） ──
         t0 = time.time()
-        bm25_weight = 0.4 + analysis.bm25_boost
-        bm25_k = max(k, int(k * bm25_weight * 2))
+        bm25_k = max(k, int(k * w.get("bm25", 1.0) * 1.5))
         bm25_docs = self._bm25_search(query, k=bm25_k)
         latency["bm25_ms"] = round((time.time() - t0) * 1000, 1)
         metrics.bm25_doc_count = len(bm25_docs)
 
-        # ── 路 2: Dense 向量 ──
+        # ── 路 2: Dense 向量（用扩展后的 query） ──
         t0 = time.time()
-        dense_k = max(k, int(k * (1 - bm25_weight) * 2 + 2))
-        dense_docs = self._dense_search(query, k=dense_k)
+        dense_k = max(k, int(k * w.get("dense", 1.0) * 1.5 + 2))
+        dense_docs = self._dense_search(dense_query, k=dense_k)
         latency["dense_ms"] = round((time.time() - t0) * 1000, 1)
         metrics.vector_doc_count = len(dense_docs)
 
-        # ── 路 2b: HyDE Dense（仅 concept_explain / general 意图） ──
-        if analysis.intent in ("concept_explain", "general"):
+        # ── 路 2b: HyDE Dense（由 analysis.hyde_enabled 控制） ──
+        if analysis.hyde_enabled:
             try:
                 hypothesis = generate_hypothetical_document_sync(query)
                 if hypothesis:
                     t0 = time.time()
                     hyde_docs = self._hyde_dense_search(hypothesis, k=dense_k)
                     latency["hyde_ms"] = round((time.time() - t0) * 1000, 1)
-                    # 把 HyDE 结果追加到 dense_docs
                     dense_docs = dense_docs + hyde_docs
                     metrics.vector_doc_count = len(dense_docs)
             except Exception as exc:
@@ -291,8 +349,13 @@ class HybridRetriever:
         latency["rule_ms"] = round((time.time() - t0) * 1000, 1)
         metrics.rule_doc_count = len(rule_docs)
 
-        # ── RRF 真融合：规则召回优先 > BM25(动态权重) > Metadata > Dense ──
-        weights = [2.0, 1.0 + analysis.bm25_boost, 0.8, 0.6]
+        # ── 动态 RRF 融合 ──
+        weights = [
+            w.get("rule", 2.0),
+            w.get("bm25", 1.0),
+            w.get("meta", 0.8),
+            w.get("dense", 0.6),
+        ]
         unique_docs = self._rrf_fusion(
             [rule_docs, bm25_docs, meta_docs, dense_docs],
             weights,
@@ -301,16 +364,25 @@ class HybridRetriever:
         metrics.fusion_method = "rrf"
         metrics.rrf_weights = weights
 
-        # ── Rerank ──
+        # ── 法条引用扩展（law_article 意图时补充关联法条） ──
+        if analysis.intent == "law_article" and analysis.entities.get("article_no"):
+            t0 = time.time()
+            ref_docs = self._expand_references(analysis)
+            latency["ref_expand_ms"] = round((time.time() - t0) * 1000, 1)
+            if ref_docs:
+                unique_docs.extend(ref_docs)
+                unique_docs = self._dedup_docs(unique_docs)
+
+        # ── Rerank（含 MMR 多样性） ──
         t0 = time.time()
-        reranked = rerank(query, unique_docs, top_k=k)
+        reranked = rerank(query, unique_docs, top_k=k, use_mmr=True)
         latency["rerank_ms"] = round((time.time() - t0) * 1000, 1)
 
         final_docs = [doc for doc, _ in reranked]
         metrics.rerank_top3_scores = [round(s, 4) for _, s in reranked[:3]]
         metrics.latency_ms = latency
 
-        # ── 异步记录指标（不阻塞主流程） ──
+        # ── 异步记录指标 ──
         try:
             log_retrieval_metrics(metrics)
         except Exception:
@@ -325,6 +397,7 @@ class HybridRetriever:
             rule=len(rule_docs),
             merged=len(unique_docs),
             final=len(final_docs),
+            rrf_weights=weights,
         )
 
         return final_docs
