@@ -69,9 +69,15 @@ def build_context_text(docs: List[Document], *, max_docs: int = 4, max_chars: in
     for idx, doc in enumerate(docs[:max_docs], start=1):
         if doc is None:
             continue
-        label = resolve_book_label(doc.metadata or {})
+        meta = doc.metadata or {}
+        label = resolve_book_label(meta)
         content = (doc.page_content or "").strip()
-        item = f"[片段{idx}] 书本标签:{label}\n内容:{content}\n"
+        chapter = meta.get("chapter", "")
+        section = meta.get("section", "")
+        page = meta.get("page", "")
+        loc_parts = [f"章:{chapter}" if chapter else "", f"节:{section}" if section else "", f"页:{page}" if page else ""]
+        loc = " ".join(p for p in loc_parts if p)
+        item = f"参考文档{idx}（来自：{label}{' ' + loc if loc else ''}）：\n{content}\n"
         if consumed + len(item) > max_chars:
             break
         chunks.append(item)
@@ -101,7 +107,7 @@ class Skill:
         )
         output = await llm.ainvoke([
             SystemMessage(content=self.config.system_prompt),
-            HumanMessage(content=f"用户问题：{query}\n\n检索上下文：\n{context_text}\n\n请输出结构化结果。"),
+            HumanMessage(content=f"检索上下文：\n{context_text}\n\n用户问题：{query}\n\n请只基于以上检索上下文回答，未涵盖的内容请如实说明。输出结构化结果。"),
         ])
 
         parsed = (
