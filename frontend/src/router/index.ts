@@ -40,6 +40,12 @@ const router = createRouter({
           meta: { title: 'RAG 知识库', icon: 'FolderOpened' }
         },
         {
+          path: 'lesson-plan-v2',
+          name: 'LessonPlanGeneratorV2',
+          component: () => import('../views/LessonPlanGeneratorV2.vue'),
+          meta: { title: '教案生成(新)', icon: 'Document' }
+        },
+        {
           path: 'question-generator',
           name: 'QuestionGenerator',
           component: () => import('../views/QuestionGenerator.vue'),

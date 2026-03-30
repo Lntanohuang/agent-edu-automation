@@ -75,6 +75,37 @@ export interface PlanAgentGenerateData {
   semesterPlan: Record<string, unknown>
 }
 
+// V2 Multi-Agent Supervisor 教案类型
+export interface AgentMeta {
+  skill_status: Record<string, 'success' | 'degraded' | 'not_registered'>
+  conflicts: string[]
+  data_gaps: string[]
+  merge_priority: Record<string, string>
+  total_time_ms: number
+}
+
+export interface PlanAgentV2GenerateData {
+  success: boolean
+  message: string
+  planId: number
+  semesterPlan: Record<string, unknown>
+  agentMeta: AgentMeta
+}
+
+export interface LessonPlanRecord {
+  id: number
+  userId: number
+  title: string
+  subject: string
+  grade: string
+  topic: string
+  status: 'generated' | 'saved' | 'published'
+  semesterPlanJson: string
+  agentMetaJson: string
+  createdAt: string
+  updatedAt: string
+}
+
 export interface QuestionGeneratePayload {
   subject: string
   topic?: string
@@ -333,6 +364,20 @@ export const authApi = {
 export const lessonPlanApi = {
   generate: (params: PlanAgentGeneratePayload) =>
     api.post<unknown, ApiResult<PlanAgentGenerateData>>('/plan-agent/generate', params)
+}
+
+// V2 Multi-Agent Supervisor 教案 API
+export const lessonPlanV2Api = {
+  generate: (params: PlanAgentGeneratePayload) =>
+    api.post<unknown, ApiResult<PlanAgentV2GenerateData>>('/plan-agent/v2/generate', params),
+  getHistory: (page = 0, size = 20) =>
+    api.get<unknown, ApiResult<SpringPage<LessonPlanRecord>>>('/plan-agent/v2/history', { params: { page, size } }),
+  getById: (id: number) =>
+    api.get<unknown, ApiResult<LessonPlanRecord>>(`/plan-agent/v2/${id}`),
+  update: (id: number, data: Partial<LessonPlanRecord>) =>
+    api.put<unknown, ApiResult<LessonPlanRecord>>(`/plan-agent/v2/${id}`, data),
+  delete: (id: number) =>
+    api.delete<unknown, ApiResult<void>>(`/plan-agent/v2/${id}`),
 }
 
 export const questionBankApi = {
