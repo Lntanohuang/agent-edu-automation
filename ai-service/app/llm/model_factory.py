@@ -91,5 +91,26 @@ def get_chat_model() -> Any:
 
 chat_llm = get_chat_model()
 
+
+def _make_chat_model(max_tokens: int) -> Any:
+    """Create a chat model with a specific max_tokens (respects chat_provider)."""
+    provider = settings.chat_provider.strip().lower()
+    if provider == "mlx":
+        return MLXChatModel(model_path=settings.mlx_model_path or "", max_tokens=max_tokens)
+    if provider in {"openai", "qwen_api"}:
+        return ChatOpenAI(
+            model=settings.openai_model,
+            api_key=settings.openai_api_key,
+            base_url=settings.openai_base_url,
+            temperature=settings.openai_temperature,
+            max_tokens=max_tokens,
+            max_retries=2,
+        )
+    return ollama_native_qwen_llm
+
+
+skill_llm = _make_chat_model(settings.skill_max_tokens)
+plan_llm = _make_chat_model(settings.plan_agent_max_tokens)
+
 # Backward-compatible alias for existing imports.
 ollama_qwen_llm = chat_llm

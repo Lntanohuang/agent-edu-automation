@@ -81,7 +81,7 @@ class TestSkillRun:
         skill = Skill(config)
         docs = [Document(page_content="法律条文", metadata={"book_label": "法理学"})]
 
-        with patch("app.skills.base.chat_llm", mock_llm):
+        with patch("app.skills.base.skill_llm", mock_llm):
             result = await skill.run("什么是法理学", docs)
 
         assert isinstance(result, SkillResponse)
@@ -114,7 +114,7 @@ class TestSkillRun:
 
         skill = Skill(config)
 
-        with patch("app.skills.base.chat_llm", mock_llm):
+        with patch("app.skills.base.skill_llm", mock_llm):
             result = await skill.run("合同法第52条", [])
 
         assert result.confidence == "low"  # no docs → confidence_without_docs

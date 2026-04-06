@@ -22,7 +22,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import END, StateGraph
 
 from app.agents.plan_agent import SemesterPlanOutput, WeeklyPlan
-from app.llm.model_factory import chat_llm
+from app.llm.model_factory import chat_llm, plan_llm
 from app.prompts.plan_prompts import (
     conflict_detection_prompt,
     lesson_plan_prompt,
@@ -294,7 +294,7 @@ async def writer_node(state: PlanSupervisorState) -> dict:
         f"请严格按结构化字段输出。"
     )
 
-    structured_llm = chat_llm.with_structured_output(
+    structured_llm = plan_llm.with_structured_output(
         SemesterPlanOutput,
         method="json_schema",
     )

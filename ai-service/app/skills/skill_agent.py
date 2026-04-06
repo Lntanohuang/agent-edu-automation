@@ -16,10 +16,9 @@ from typing import TYPE_CHECKING, Callable, List, Optional
 from langchain_core.documents import Document
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from app.core.config import settings
 from app.core.exceptions import SkillError
 from app.core.logging import get_traced_logger
-from app.llm.model_factory import chat_llm
+from app.llm.model_factory import skill_llm
 from app.skills.base import build_context_text, build_sources, collect_book_labels
 from app.skills.schemas import SkillResponse
 
@@ -102,7 +101,7 @@ class SkillAgent:
             context_text = build_context_text(filtered_docs)
 
             # 2. LLM 结构化输出（使用分层 prompt）
-            llm = chat_llm.bind(max_tokens=settings.skill_max_tokens).with_structured_output(
+            llm = skill_llm.with_structured_output(
                 self.config.output_schema, method="json_schema",
             )
             output = await llm.ainvoke([

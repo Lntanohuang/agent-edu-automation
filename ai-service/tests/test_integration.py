@@ -153,14 +153,18 @@ def _patch_vector_store(seeded_vs):
 
 
 def _patch_llm(clean_llm_instance):
-    """返回 patch 列表，替换所有 chat_llm 引用点。"""
+    """返回 patch 列表，替换所有 chat_llm / skill_llm / plan_llm 引用点。"""
     return (
         patch("app.llm.model_factory.chat_llm", clean_llm_instance),
-        patch("app.skills.base.chat_llm", clean_llm_instance),
+        patch("app.llm.model_factory.skill_llm", clean_llm_instance),
+        patch("app.llm.model_factory.plan_llm", clean_llm_instance),
+        patch("app.skills.base.skill_llm", clean_llm_instance),
+        patch("app.skills.skill_agent.skill_llm", clean_llm_instance),
         patch("app.skills.router.chat_llm", clean_llm_instance),
         patch("app.skills.teaching_task_generator.skill.chat_llm", clean_llm_instance),
         patch("app.services.question_generation_service.chat_llm", clean_llm_instance),
         patch("app.services.rag_chat_service.chat_llm", clean_llm_instance),
+        patch("app.agents.plan_agent.plan_llm", clean_llm_instance),
     )
 
 

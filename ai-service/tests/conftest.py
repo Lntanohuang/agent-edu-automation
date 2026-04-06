@@ -90,7 +90,7 @@ async def client(mock_llm, mock_vector_store):
         patch("app.routers.rag.get_rag_vector_store", return_value=mock_vector_store),
         patch("app.services.question_generation_service.get_rag_vector_store", return_value=mock_vector_store),
         patch("app.services.question_generation_service.chat_llm", mock_llm),
-        patch("app.skills.base.chat_llm", mock_llm),
+        patch("app.skills.base.skill_llm", mock_llm),
         patch("app.skills.router.chat_llm", mock_llm),
         patch("app.skills.teaching_task_generator.skill.chat_llm", mock_llm),
     ):
