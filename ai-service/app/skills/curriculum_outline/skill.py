@@ -2,7 +2,7 @@
 
 from typing import List
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.skills.skill_config import SkillConfig
 
@@ -33,6 +33,16 @@ class CurriculumOutlineOutput(BaseModel):
             if isinstance(inner, dict) and key not in cls.model_fields:
                 return inner
         return data
+
+    @field_validator("chapter_structure", mode="before")
+    @classmethod
+    def coerce_chapter_items(cls, v):
+        if isinstance(v, list):
+            return [
+                {"chapter_name": item, "key_concepts": []} if isinstance(item, str) else item
+                for item in v
+            ]
+        return v
 
 
 def _format(parsed: CurriculumOutlineOutput) -> str:

@@ -7,6 +7,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 
 from app.llm.model_factory import chat_llm
+from app.llm.structured_output import get_structured_output_method
 from app.skills.base import build_context_text, collect_book_labels
 
 
@@ -42,7 +43,7 @@ class TeachingTaskGeneratorSkill:
 
         llm = chat_llm.with_structured_output(
             TeachingTasksOutput,
-            method="json_schema",
+            method=get_structured_output_method(),
         )
 
         try:
@@ -52,6 +53,7 @@ class TeachingTaskGeneratorSkill:
                         content=(
                             "你是课程助教。请根据问题所属学科领域，为学生生成2-3条可执行的探索任务。"
                             "任务必须引导学生回到教材或检索资料，具体且有针对性，不要空泛。"
+                            "请返回合法 json（小写 json），不要输出额外文本。"
                         )
                     ),
                     HumanMessage(
@@ -60,7 +62,7 @@ class TeachingTaskGeneratorSkill:
                             f"当前回答：{answer}\n\n"
                             f"书本标签：{label_text}\n\n"
                             f"检索片段：\n{context_text}\n\n"
-                            "请输出结构化 tasks。"
+                            "请输出结构化 tasks，并确保返回合法 json。"
                         )
                     ),
                 ]

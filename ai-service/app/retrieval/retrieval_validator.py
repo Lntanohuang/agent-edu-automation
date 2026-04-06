@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 
 from app.core.logging import get_traced_logger
 from app.llm.model_factory import chat_llm
+from app.llm.structured_output import get_structured_output_method
 
 
 class RelevanceGrade(BaseModel):
@@ -61,7 +62,7 @@ async def validate_retrieval(
     top_docs = docs[:3]
     relevant_count = 0
 
-    llm = chat_llm.with_structured_output(RelevanceGrade, method="json_schema")
+    llm = chat_llm.with_structured_output(RelevanceGrade, method=get_structured_output_method())
 
     for doc in top_docs:
         try:
@@ -69,7 +70,8 @@ async def validate_retrieval(
                 SystemMessage(content=(
                     "你是检索质量评审员。判断以下文档片段是否与用户问题相关。\n"
                     "相关的标准：文档内容能部分或全部回答用户问题，或提供有用的背景信息。\n"
-                    "不相关的标准：文档内容与问题完全无关，或仅有表面关键词重叠但语义不同。"
+                    "不相关的标准：文档内容与问题完全无关，或仅有表面关键词重叠但语义不同。\n"
+                    "请返回合法 json（小写 json），不要输出额外文本。"
                 )),
                 HumanMessage(content=(
                     f"用户问题：{query}\n\n"
@@ -104,7 +106,7 @@ async def rewrite_query(query: str) -> str:
     """
     logger = get_traced_logger(__name__)
     t0 = time.perf_counter()
-    llm = chat_llm.with_structured_output(QueryRewrite, method="json_schema")
+    llm = chat_llm.with_structured_output(QueryRewrite, method=get_structured_output_method())
     try:
         result = await llm.ainvoke([
             SystemMessage(content=(
@@ -114,7 +116,8 @@ async def rewrite_query(query: str) -> str:
                 "2. 如果是口语化表达，转换为法律/教育领域的正式术语\n"
                 "3. 如果问题模糊，尝试明确化\n"
                 "4. 保持原始查询的核心意图不变\n"
-                "输出重写后的查询（一句话，不超过100字）。"
+                "输出重写后的查询（一句话，不超过100字）。\n"
+                "请返回合法 json（小写 json），不要输出额外文本。"
             )),
             HumanMessage(content=f"原始查询：{query}\n\n请重写："),
         ])

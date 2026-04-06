@@ -14,6 +14,7 @@ from app.core.exceptions import LLMError, RetrievalError, ValidationError as Pla
 from app.core.logging import get_logger
 from app.core.tracing import traceable
 from app.llm.model_factory import chat_llm
+from app.llm.structured_output import get_structured_output_method
 from app.llm.vector_store import get_rag_vector_store
 
 logger = get_logger(__name__)
@@ -394,7 +395,7 @@ async def _run_question_generation_pipeline(
 
     structured_llm = chat_llm.with_structured_output(
         GeneratedQuestionSet,
-        method="json_schema",
+        method=get_structured_output_method(),
     )
 
     system_prompt = (
@@ -404,7 +405,8 @@ async def _run_question_generation_pipeline(
         "2) 单选/多选/填空/判断题需可判定，答案唯一或标准明确。\n"
         "3) 每题必须给出答案(answer)与解析(explanation)。\n"
         "4) 每题必须给出 source_citations，至少 1 条，且包含书本标签与片段。\n"
-        "5) 输出字段严格匹配结构化 schema，不要额外字段。"
+        "5) 输出字段严格匹配结构化 schema，不要额外字段。\n"
+        "6) 结构化输出必须是合法 json（小写 json），不要输出额外文本。"
     )
     human_prompt = (
         f"出题需求：\n"
@@ -419,7 +421,7 @@ async def _run_question_generation_pipeline(
         f"- 教材范围：{', '.join(request.textbook_scope) if request.textbook_scope else '全部已索引教材'}\n\n"
         f"可用教材标签：{', '.join(labels) if labels else '无'}\n\n"
         f"教材片段：\n{context_text}\n\n"
-        "请严格输出结构化题目。"
+        "请严格输出结构化题目，并确保返回合法 json。"
     )
 
     llm_started_at = time.time()

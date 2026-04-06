@@ -23,6 +23,7 @@ from langgraph.graph import END, StateGraph
 
 from app.agents.plan_agent import SemesterPlanOutput, WeeklyPlan
 from app.llm.model_factory import chat_llm, plan_llm
+from app.llm.structured_output import get_structured_output_method
 from app.prompts.plan_prompts import (
     conflict_detection_prompt,
     lesson_plan_prompt,
@@ -291,16 +292,16 @@ async def writer_node(state: PlanSupervisorState) -> dict:
         f"{skills_text}"
         f"{gap_notice}"
         f"{conflict_notice}\n\n"
-        f"请严格按结构化字段输出。"
+        f"请严格按结构化字段输出，并返回合法 json（小写 json），不要输出额外文本。"
     )
 
     structured_llm = plan_llm.with_structured_output(
         SemesterPlanOutput,
-        method="json_schema",
+        method=get_structured_output_method(),
     )
 
     output = await structured_llm.ainvoke([
-        SystemMessage(content=f"{lesson_plan_prompt}\n\n{writer_merge_prompt}"),
+        SystemMessage(content=f"{lesson_plan_prompt}\n\n{writer_merge_prompt}\n\n结构化输出时必须返回合法 json（小写 json）。"),
         HumanMessage(content=merge_input),
     ])
 

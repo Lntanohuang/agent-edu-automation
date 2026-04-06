@@ -35,8 +35,9 @@ class Settings(BaseSettings):
     openai_model: str = Field(default="qwen-plus-latest", description="聊天模型名称（通义千问）")
     openai_temperature: float = Field(default=0.7, ge=0, le=2, description="温度参数")
     openai_max_tokens: int = Field(default=2000, ge=1, le=16000, description="默认最大Token数")
-    plan_agent_max_tokens: int = Field(default=8000, ge=2000, le=8192, description="教案生成最大Token数（通义千问上限8192）")
-    skill_max_tokens: int = Field(default=4000, ge=1000, le=8192, description="Skill 执行最大Token数")
+    plan_agent_max_tokens: int = Field(default=8000, ge=2000, le=32000, description="教案生成最大Token数（按所选模型能力配置）")
+    skill_max_tokens: int = Field(default=4000, ge=1000, le=16000, description="Skill 执行最大Token数")
+    fixer_model: str = Field(default="qwen-turbo-latest", description="结构化输出修复用小模型")
     
     # 备用模型配置
     azure_openai_api_key: Optional[str] = Field(default=None, description="Azure OpenAI API Key")

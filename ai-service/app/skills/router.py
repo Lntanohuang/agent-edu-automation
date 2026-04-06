@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 
 from app.core.logging import get_traced_logger
 from app.llm.model_factory import chat_llm
+from app.llm.structured_output import get_structured_output_method
 from app.skills.base import Skill
 from app.skills.registry import get_registered_skills
 
@@ -41,7 +42,8 @@ def _build_routing_prompt(skills: Dict[str, Skill]) -> str:
     return (
         "你是技能路由器。根据用户问题选择最合适的技能。\n\n"
         f"可选技能：\n{skill_list}\n\n"
-        "请选择最匹配的技能名称。skill_name 字段只能是上面列出的名称之一。"
+        "请选择最匹配的技能名称。skill_name 字段只能是上面列出的名称之一。\n"
+        "请返回合法 json（小写 json），不要输出额外文本。"
     )
 
 
@@ -56,7 +58,7 @@ async def select_skill(query: str) -> Skill:
     if len(skills) == 1:
         return next(iter(skills.values()))
 
-    llm = chat_llm.with_structured_output(RouteDecision, method="json_schema")
+    llm = chat_llm.with_structured_output(RouteDecision, method=get_structured_output_method())
     try:
         decision = await llm.ainvoke([
             SystemMessage(content=_build_routing_prompt(skills)),

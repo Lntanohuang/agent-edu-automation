@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 from app.core.exceptions import LLMError
 from app.core.logging import get_traced_logger
 from app.llm.model_factory import plan_llm
+from app.llm.structured_output import get_structured_output_method
 from app.retrieval.query_analyzer import analyze_query
 from app.retrieval.hybrid_retriever import get_hybrid_retriever
 from app.prompts.plan_prompts import lesson_plan_prompt
@@ -143,18 +144,19 @@ class SkillEnhancedPlanAgent:
                 f"{skills_context}"
             )
         enriched_query_parts.append("请严格按结构化字段输出。")
+        enriched_query_parts.append("请返回合法 json（小写 json），不要输出额外说明文本。")
         enriched_query = "\n\n".join(enriched_query_parts)
 
         # ── 4. 最终 LLM 生成 ──
         structured_llm = plan_llm.with_structured_output(
             SemesterPlanOutput,
-            method="json_schema",
+            method=get_structured_output_method(),
         )
 
         llm_started_at = time.time()
         try:
             structured = await structured_llm.ainvoke([
-                SystemMessage(content=lesson_plan_prompt),
+                SystemMessage(content=f"{lesson_plan_prompt}\n\n结构化输出时必须返回合法 json（小写 json），不要输出额外文本。"),
                 HumanMessage(content=enriched_query),
             ])
         except Exception as exc:

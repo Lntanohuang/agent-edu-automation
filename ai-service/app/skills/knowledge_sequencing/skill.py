@@ -2,7 +2,7 @@
 
 from typing import List
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.skills.skill_config import SkillConfig
 
@@ -29,6 +29,17 @@ class KnowledgeSequencingOutput(BaseModel):
             if isinstance(inner, dict) and key not in cls.model_fields:
                 return inner
         return data
+
+    @field_validator("sequenced_topics", mode="before")
+    @classmethod
+    def coerce_sequenced_topics(cls, v):
+        if isinstance(v, list):
+            return [
+                {"topic": item, "week_range": "", "level": "基础", "depends_on": [], "learning_objectives": []}
+                if isinstance(item, str) else item
+                for item in v
+            ]
+        return v
 
     sequencing_rationale: str = Field(default="", description="编排逻辑说明（为何如此排序）")
     sequenced_topics: List[SequencedTopic] = Field(default_factory=list, description="按教学顺序排列的知识点")

@@ -2,7 +2,7 @@
 
 from typing import List
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.skills.skill_config import SkillConfig
 
@@ -36,6 +36,17 @@ class AssessmentDesignOutput(BaseModel):
             if isinstance(inner, dict) and key not in cls.model_fields:
                 return inner
         return data
+
+    @field_validator("formative_items", "summative_items", mode="before")
+    @classmethod
+    def coerce_assessment_items(cls, v):
+        if isinstance(v, list):
+            return [
+                {"name": item, "category": "", "weight": 0, "description": item, "timing": ""}
+                if isinstance(item, str) else item
+                for item in v
+            ]
+        return v
 
 
 def _format(parsed: AssessmentDesignOutput) -> str:

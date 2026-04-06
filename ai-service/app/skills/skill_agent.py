@@ -19,6 +19,8 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from app.core.exceptions import SkillError
 from app.core.logging import get_traced_logger
 from app.llm.model_factory import skill_llm
+from app.llm.structured_output import build_format_constrained_system_prompt, build_format_constrained_human_suffix
+from app.llm.output_fixer import try_parse_with_fix
 from app.skills.base import build_context_text, build_sources, collect_book_labels
 from app.skills.schemas import SkillResponse
 
@@ -55,6 +57,7 @@ _SHARED_PREFIX = """核心规则:
 2. 信息不足时明确告知，并给出自学方向。
 3. 回答必须包含「依据来源」。
 4. 结构: 结论 → 依据 → 要点 → 拓展思考(1-2题)。
+5. 结构化输出时必须返回合法 json（小写 json），不要输出额外文本。
 """
 
 
@@ -100,20 +103,26 @@ class SkillAgent:
             filtered_docs = self.filter_docs(query, retrieved_docs)
             context_text = build_context_text(filtered_docs)
 
-            # 2. LLM 结构化输出（使用分层 prompt）
-            llm = skill_llm.with_structured_output(
-                self.config.output_schema, method="json_schema",
-            )
-            output = await llm.ainvoke([
-                SystemMessage(content=self._system_prompt),
-                HumanMessage(content=f"用户问题：{query}\n\n检索上下文：\n{context_text}\n\n请输出结构化结果。"),
-            ])
+            # 2. LLM 结构化输出（4层防御：JSON mode + prompt约束 + validators容错 + 小模型修复）
+            llm = skill_llm.bind(response_format={"type": "json_object"})
 
-            parsed = (
-                output
-                if isinstance(output, self.config.output_schema)
-                else self.config.output_schema.model_validate(output)
+            constrained_system = build_format_constrained_system_prompt(
+                self._system_prompt, schema=self.config.output_schema
             )
+            human_content = (
+                f"用户问题：{query}\n\n"
+                f"检索上下文：\n{context_text}\n\n"
+                f"请输出结构化结果。\n\n"
+                f"{build_format_constrained_human_suffix()}"
+            )
+
+            raw_response = await llm.ainvoke([
+                SystemMessage(content=constrained_system),
+                HumanMessage(content=human_content),
+            ])
+            raw_json = raw_response.content
+
+            parsed = await try_parse_with_fix(raw_json, self.config.output_schema, context_label=self.name)
 
             answer = self.config.format_answer(parsed)
             tasks = getattr(parsed, "exploration_tasks", [])

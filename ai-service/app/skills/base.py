@@ -12,6 +12,8 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from app.core.logging import get_traced_logger
 from app.core.exceptions import SkillError
 from app.llm.model_factory import skill_llm
+from app.llm.structured_output import build_format_constrained_system_prompt, build_format_constrained_human_suffix
+from app.llm.output_fixer import try_parse_with_fix
 from app.skills.schemas import SkillResponse
 
 if TYPE_CHECKING:
@@ -109,19 +111,28 @@ class Skill:
         try:
             context_text = build_context_text(retrieved_docs)
 
-            llm = skill_llm.with_structured_output(
-                self.config.output_schema, method="json_schema",
-            )
-            output = await llm.ainvoke([
-                SystemMessage(content=self.config.system_prompt),
-                HumanMessage(content=f"检索上下文：\n{context_text}\n\n用户问题：{query}\n\n请只基于以上检索上下文回答，未涵盖的内容请如实说明。输出结构化结果。"),
-            ])
+            # 第1层: provider-aware JSON mode (不用 with_structured_output)
+            llm = skill_llm.bind(response_format={"type": "json_object"})
 
-            parsed = (
-                output
-                if isinstance(output, self.config.output_schema)
-                else self.config.output_schema.model_validate(output)
+            # 第2层: prompt 强约束
+            constrained_system = build_format_constrained_system_prompt(
+                self.config.system_prompt, schema=self.config.output_schema
             )
+            human_content = (
+                f"检索上下文：\n{context_text}\n\n"
+                f"用户问题：{query}\n\n"
+                f"请只基于以上检索上下文回答，未涵盖的内容请如实说明。输出结构化结果。\n\n"
+                f"{build_format_constrained_human_suffix()}"
+            )
+
+            raw_response = await llm.ainvoke([
+                SystemMessage(content=constrained_system),
+                HumanMessage(content=human_content),
+            ])
+            raw_json = raw_response.content
+
+            # 第3层 + 第4层: validators 容错 + 小模型修复
+            parsed = await try_parse_with_fix(raw_json, self.config.output_schema, context_label=self.name)
 
             answer = self.config.format_answer(parsed)
 

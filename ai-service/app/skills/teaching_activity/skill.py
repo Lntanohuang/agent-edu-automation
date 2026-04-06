@@ -2,7 +2,7 @@
 
 from typing import List
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.skills.skill_config import SkillConfig
 
@@ -29,6 +29,17 @@ class TeachingActivityOutput(BaseModel):
             if isinstance(inner, dict) and key not in cls.model_fields:
                 return inner
         return data
+
+    @field_validator("activities", mode="before")
+    @classmethod
+    def coerce_activity_items(cls, v):
+        if isinstance(v, list):
+            return [
+                {"name": item, "activity_type": "", "duration": "", "description": item, "materials": []}
+                if isinstance(item, str) else item
+                for item in v
+            ]
+        return v
 
     topic_context: str = Field(default="", description="活动针对的知识点或教学主题")
     activities: List[ActivityItem] = Field(default_factory=list, description="推荐的教学活动列表")
