@@ -11,6 +11,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from app.core.logging import get_traced_logger
 from app.core.exceptions import SkillError
+from app.core.config import settings
 from app.llm.model_factory import chat_llm
 from app.skills.schemas import SkillResponse
 
@@ -109,7 +110,7 @@ class Skill:
         try:
             context_text = build_context_text(retrieved_docs)
 
-            llm = chat_llm.with_structured_output(
+            llm = chat_llm.bind(max_tokens=settings.skill_max_tokens).with_structured_output(
                 self.config.output_schema, method="json_schema",
             )
             output = await llm.ainvoke([
