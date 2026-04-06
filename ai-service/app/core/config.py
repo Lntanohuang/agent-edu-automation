@@ -31,8 +31,8 @@ class Settings(BaseSettings):
     
     # OpenAI 配置
     openai_api_key: str = Field(..., description="OpenAI API Key")
-    openai_base_url: str = Field(default="https://api.openai.com/v1", description="OpenAI Base URL")
-    openai_model: str = Field(default="gpt-4", description="默认模型")
+    openai_base_url: str = Field(default="https://dashscope.aliyuncs.com/compatible-mode/v1", description="通义千问 API Base URL")
+    openai_model: str = Field(default="qwen-plus-latest", description="聊天模型名称（通义千问）")
     openai_temperature: float = Field(default=0.7, ge=0, le=2, description="温度参数")
     openai_max_tokens: int = Field(default=2000, ge=1, le=16000, description="默认最大Token数")
     plan_agent_max_tokens: int = Field(default=8000, ge=2000, le=8192, description="教案生成最大Token数（通义千问上限8192）")
@@ -43,7 +43,7 @@ class Settings(BaseSettings):
     azure_openai_deployment: Optional[str] = Field(default=None, description="Azure OpenAI Deployment")
 
     # 聊天模型配置
-    chat_provider: str = Field(default="ollama", description="聊天模型提供方：ollama、mlx 或 openai")
+    chat_provider: str = Field(default="qwen_api", description="聊天模型提供方：qwen_api、ollama 或 mlx")
 
     # Ollama 配置
     ollama_base_url: str = Field(default="http://127.0.0.1:11434", description="Ollama Base URL")
@@ -53,7 +53,11 @@ class Settings(BaseSettings):
     ollama_qwen_url: Optional[str] = Field(default=None, description="Ollama Qwen 服务地址（为空则使用 ollama_base_url）")
     mlx_model_path: Optional[str] = Field(default=None, description="MLX 本地聊天模型目录")
     mlx_max_tokens: int = Field(default=2000, ge=1, le=8192, description="MLX 生成最大 token 数")
-    
+
+    # Embedding 配置
+    embedding_provider: str = Field(default="dashscope", description="Embedding 提供方：dashscope 或 ollama")
+    dashscope_embedding_model: str = Field(default="text-embedding-v3", description="通义千问 Embedding 模型")
+
     # 向量数据库配置
     chroma_persist_directory: str = Field(default="./chroma_db", description="ChromaDB 持久化目录")
     chroma_collection_name: str = Field(default="edu_knowledge", description="ChromaDB 集合名称")

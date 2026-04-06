@@ -20,7 +20,7 @@ from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from app.core.config import settings
-from app.llm.model_factory import ollama_embedding_model
+from app.llm.model_factory import embedding_model
 from app.core.logging import get_logger
 from app.retrieval.hybrid_retriever import get_hybrid_retriever
 from app.models.schemas import KnowledgeSearchRequest
@@ -42,7 +42,7 @@ class KnowledgeService:
     }
     
     def __init__(self):
-        self.embeddings = ollama_embedding_model
+        self.embeddings = embedding_model
         
         # 确保目录存在
         os.makedirs(settings.chroma_persist_directory, exist_ok=True)

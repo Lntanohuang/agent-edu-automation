@@ -92,7 +92,8 @@ async def health_check():
         "version": settings.app_version,
         "chat_provider": settings.chat_provider,
         "chat_model": _active_chat_model_name(),
-        "embedding_model": settings.ollama_embedding_model,
+        "embedding_provider": settings.embedding_provider,
+        "embedding_model": settings.dashscope_embedding_model if settings.embedding_provider.strip().lower() != "ollama" else settings.ollama_embedding_model,
     }
 
 
@@ -113,7 +114,8 @@ async def startup_event():
         version=settings.app_version,
         chat_provider=settings.chat_provider,
         chat_model=_active_chat_model_name(),
-        embedding_model=settings.ollama_embedding_model,
+        embedding_provider=settings.embedding_provider,
+        embedding_model=settings.dashscope_embedding_model if settings.embedding_provider.strip().lower() != "ollama" else settings.ollama_embedding_model,
     )
 
 
