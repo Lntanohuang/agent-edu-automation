@@ -75,6 +75,13 @@ export interface PlanAgentGenerateData {
   semesterPlan: Record<string, unknown>
 }
 
+interface PlanAgentGenerateDataWire {
+  success?: boolean
+  message?: string
+  semesterPlan?: Record<string, unknown>
+  semester_plan?: Record<string, unknown>
+}
+
 // V2 Multi-Agent Supervisor 教案类型
 export interface AgentMeta {
   skill_status: Record<string, 'success' | 'degraded' | 'not_registered'>
@@ -90,6 +97,17 @@ export interface PlanAgentV2GenerateData {
   planId: number
   semesterPlan: Record<string, unknown>
   agentMeta: AgentMeta
+}
+
+interface PlanAgentV2GenerateDataWire {
+  success?: boolean
+  message?: string
+  planId?: number
+  plan_id?: number
+  semesterPlan?: Record<string, unknown>
+  semester_plan?: Record<string, unknown>
+  agentMeta?: AgentMeta
+  agent_meta?: AgentMeta
 }
 
 export interface LessonPlanRecord {
@@ -289,7 +307,7 @@ export interface RagAgentChatData {
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api',
-  timeout: 120000,
+  timeout: 180000,
   headers: {
     'Content-Type': 'application/json'
   }
@@ -297,8 +315,54 @@ const api = axios.create({
 
 const aiApi = axios.create({
   baseURL: import.meta.env.VITE_AI_SERVICE_BASE_URL || 'http://localhost:8000',
-  timeout: 120000
+  timeout: 180000
 })
+
+const isApiResult = <T>(value: unknown): value is ApiResult<T> => {
+  return typeof value === 'object' && value !== null && 'code' in value && 'data' in value
+}
+
+const normalizeApiResult = <T>(value: unknown, normalizeData: (payload: unknown) => T): ApiResult<T> => {
+  if (isApiResult<unknown>(value)) {
+    return {
+      ...value,
+      data: normalizeData(value.data)
+    } as ApiResult<T>
+  }
+
+  return {
+    code: 200,
+    message: 'success',
+    data: normalizeData(value),
+    timestamp: new Date().toISOString()
+  }
+}
+
+const normalizePlanAgentGenerateData = (value: unknown): PlanAgentGenerateData => {
+  const payload = (value ?? {}) as PlanAgentGenerateDataWire
+  return {
+    success: Boolean(payload.success),
+    message: payload.message || '',
+    semesterPlan: payload.semesterPlan || payload.semester_plan || {}
+  }
+}
+
+const normalizePlanAgentV2GenerateData = (value: unknown): PlanAgentV2GenerateData => {
+  const payload = (value ?? {}) as PlanAgentV2GenerateDataWire
+  return {
+    success: Boolean(payload.success),
+    message: payload.message || '',
+    planId: payload.planId ?? payload.plan_id ?? 0,
+    semesterPlan: payload.semesterPlan || payload.semester_plan || {},
+    agentMeta: payload.agentMeta || payload.agent_meta || {
+      skill_status: {},
+      conflicts: [],
+      data_gaps: [],
+      merge_priority: {},
+      total_time_ms: 0
+    }
+  }
+}
 
 aiApi.interceptors.response.use(
   (response) => response.data,
@@ -362,14 +426,24 @@ export const authApi = {
 
 // 智能教案 API
 export const lessonPlanApi = {
-  generate: (params: PlanAgentGeneratePayload) =>
-    api.post<unknown, ApiResult<PlanAgentGenerateData>>('/plan-agent/generate', params)
+  generate: async (params: PlanAgentGeneratePayload) => {
+    const response = await api.post<unknown, ApiResult<PlanAgentGenerateData> | PlanAgentGenerateDataWire>(
+      '/plan-agent/generate',
+      params
+    )
+    return normalizeApiResult(response, normalizePlanAgentGenerateData)
+  }
 }
 
 // V2 Multi-Agent Supervisor 教案 API
 export const lessonPlanV2Api = {
-  generate: (params: PlanAgentGeneratePayload) =>
-    api.post<unknown, ApiResult<PlanAgentV2GenerateData>>('/plan-agent/v2/generate', params),
+  generate: async (params: PlanAgentGeneratePayload) => {
+    const response = await api.post<unknown, ApiResult<PlanAgentV2GenerateData> | PlanAgentV2GenerateDataWire>(
+      '/plan-agent/v2/generate',
+      params
+    )
+    return normalizeApiResult(response, normalizePlanAgentV2GenerateData)
+  },
   getHistory: (page = 0, size = 20) =>
     api.get<unknown, ApiResult<SpringPage<LessonPlanRecord>>>('/plan-agent/v2/history', { params: { page, size } }),
   getById: (id: number) =>
