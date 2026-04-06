@@ -9,12 +9,13 @@ import time
 from typing import List
 
 from langchain_core.messages import HumanMessage, SystemMessage
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.core.exceptions import LLMError
 from app.core.logging import get_traced_logger
 from app.llm.model_factory import plan_llm
-from app.llm.structured_output import get_structured_output_method
+from app.llm.structured_output import build_format_constrained_system_prompt, build_format_constrained_human_suffix
+from app.llm.output_fixer import try_parse_with_fix
 from app.retrieval.query_analyzer import analyze_query
 from app.retrieval.hybrid_retriever import get_hybrid_retriever
 from app.prompts.plan_prompts import lesson_plan_prompt
@@ -30,31 +31,58 @@ _PLAN_SKILLS = [
 
 
 class WeeklyPlan(BaseModel):
-    week: int = Field(description="Week number starting from 1")
-    unit_topic: str = Field(description="Weekly unit topic")
-    objectives: List[str] = Field(description="Weekly objectives")
-    key_points: List[str] = Field(description="Weekly key points")
-    difficulties: List[str] = Field(description="Weekly difficulties")
-    activities: List[str] = Field(description="Weekly core activities")
-    homework: str = Field(description="Weekly homework")
-    assessment: str = Field(description="Weekly assessment method")
+    week: int = Field(default=0, description="Week number starting from 1")
+    unit_topic: str = Field(default="", description="Weekly unit topic")
+    objectives: List[str] = Field(default_factory=list, description="Weekly objectives")
+    key_points: List[str] = Field(default_factory=list, description="Weekly key points")
+    difficulties: List[str] = Field(default_factory=list, description="Weekly difficulties")
+    activities: List[str] = Field(default_factory=list, description="Weekly core activities")
+    homework: str = Field(default="", description="Weekly homework")
+    assessment: str = Field(default="", description="Weekly assessment method")
 
 
 class SemesterPlanOutput(BaseModel):
     """Final structured output for semester lesson plan generation."""
-    semester_title: str = Field(description="Semester plan title")
-    subject: str = Field(description="Subject")
-    grade: str = Field(description="Grade level")
-    total_weeks: int = Field(description="Total weeks in semester")
-    lessons_per_week: int = Field(description="Lessons per week")
-    textbook_version: str = Field(description="Textbook version")
-    difficulty: str = Field(description="Difficulty level")
-    semester_goals: List[str] = Field(description="Semester-level goals")
-    key_competencies: List[str] = Field(description="Core competencies to cultivate")
-    teaching_strategies: List[str] = Field(description="Semester teaching strategies")
-    weekly_plans: List[WeeklyPlan] = Field(description="Weekly teaching plans")
-    assessment_plan: List[str] = Field(description="Semester assessment plan")
-    resource_plan: List[str] = Field(description="Semester teaching resource plan")
+    semester_title: str = Field(default="", description="Semester plan title")
+    subject: str = Field(default="", description="Subject")
+    grade: str = Field(default="", description="Grade level")
+    total_weeks: int = Field(default=0, description="Total weeks in semester")
+    lessons_per_week: int = Field(default=0, description="Lessons per week")
+    textbook_version: str = Field(default="", description="Textbook version")
+    difficulty: str = Field(default="", description="Difficulty level")
+    semester_goals: List[str] = Field(default_factory=list, description="Semester-level goals")
+    key_competencies: List[str] = Field(default_factory=list, description="Core competencies to cultivate")
+    teaching_strategies: List[str] = Field(default_factory=list, description="Semester teaching strategies")
+    weekly_plans: List[WeeklyPlan] = Field(default_factory=list, description="Weekly teaching plans")
+    assessment_plan: List[str] = Field(default_factory=list, description="Semester assessment plan")
+    resource_plan: List[str] = Field(default_factory=list, description="Semester teaching resource plan")
+
+    @model_validator(mode="before")
+    @classmethod
+    def unwrap_nested(cls, data):
+        if isinstance(data, dict) and len(data) == 1:
+            key = next(iter(data))
+            inner = data[key]
+            if isinstance(inner, dict) and key not in cls.model_fields:
+                return inner
+        return data
+
+    @field_validator("weekly_plans", mode="before")
+    @classmethod
+    def coerce_weekly_plans(cls, v):
+        if isinstance(v, list):
+            return [
+                {"unit_topic": item, "week": 0} if isinstance(item, str) else item
+                for item in v
+            ]
+        return v
+
+    @field_validator("assessment_plan", mode="before")
+    @classmethod
+    def coerce_assessment_plan(cls, v):
+        if isinstance(v, dict):
+            return [f"{k}: {v_}" for k, v_ in v.items()]
+        return v
 
 
 class SkillEnhancedPlanAgent:
@@ -148,17 +176,21 @@ class SkillEnhancedPlanAgent:
         enriched_query = "\n\n".join(enriched_query_parts)
 
         # ── 4. 最终 LLM 生成 ──
-        structured_llm = plan_llm.with_structured_output(
-            SemesterPlanOutput,
-            method=get_structured_output_method(),
+        llm = plan_llm.bind(response_format={"type": "json_object"})
+        constrained_system = build_format_constrained_system_prompt(
+            lesson_plan_prompt, schema=SemesterPlanOutput
         )
+        human_content = f"{enriched_query}\n\n{build_format_constrained_human_suffix()}"
 
         llm_started_at = time.time()
         try:
-            structured = await structured_llm.ainvoke([
-                SystemMessage(content=f"{lesson_plan_prompt}\n\n结构化输出时必须返回合法 json（小写 json），不要输出额外文本。"),
-                HumanMessage(content=enriched_query),
+            raw_response = await llm.ainvoke([
+                SystemMessage(content=constrained_system),
+                HumanMessage(content=human_content),
             ])
+            structured = await try_parse_with_fix(
+                raw_response.content, SemesterPlanOutput, context_label="plan_agent"
+            )
         except Exception as exc:
             logger.error("plan_agent_llm_failed", trace_id=trace_id, error=str(exc), exc_info=True)
             raise LLMError(f"教案生成 LLM 调用失败: {exc}", detail={"trace_id": trace_id}) from exc

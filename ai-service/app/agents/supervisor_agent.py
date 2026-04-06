@@ -23,7 +23,8 @@ from langgraph.graph import END, StateGraph
 
 from app.agents.plan_agent import SemesterPlanOutput, WeeklyPlan
 from app.llm.model_factory import chat_llm, plan_llm
-from app.llm.structured_output import get_structured_output_method
+from app.llm.structured_output import build_format_constrained_system_prompt, build_format_constrained_human_suffix
+from app.llm.output_fixer import try_parse_with_fix
 from app.prompts.plan_prompts import (
     conflict_detection_prompt,
     lesson_plan_prompt,
@@ -295,18 +296,22 @@ async def writer_node(state: PlanSupervisorState) -> dict:
         f"请严格按结构化字段输出，并返回合法 json（小写 json），不要输出额外文本。"
     )
 
-    structured_llm = plan_llm.with_structured_output(
-        SemesterPlanOutput,
-        method=get_structured_output_method(),
+    llm = plan_llm.bind(response_format={"type": "json_object"})
+    # Build constrained prompts
+    system_prompt_content = f"{lesson_plan_prompt}\n\n{writer_merge_prompt}\n\n结构化输出时必须返回合法 json（小写 json）。"
+    constrained_system = build_format_constrained_system_prompt(
+        system_prompt_content,
+        schema=SemesterPlanOutput,
     )
+    human_content = f"{merge_input}\n\n{build_format_constrained_human_suffix()}"
 
-    output = await structured_llm.ainvoke([
-        SystemMessage(content=f"{lesson_plan_prompt}\n\n{writer_merge_prompt}\n\n结构化输出时必须返回合法 json（小写 json）。"),
-        HumanMessage(content=merge_input),
+    raw_response = await llm.ainvoke([
+        SystemMessage(content=constrained_system),
+        HumanMessage(content=human_content),
     ])
-
-    if not isinstance(output, SemesterPlanOutput):
-        output = SemesterPlanOutput.model_validate(output)
+    output = await try_parse_with_fix(
+        raw_response.content, SemesterPlanOutput, context_label="supervisor_writer"
+    )
 
     # 构建 agent_meta
     skill_status = {}
