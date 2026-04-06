@@ -11,6 +11,7 @@ from typing import List
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 
+from app.core.config import settings
 from app.core.exceptions import LLMError
 from app.core.logging import get_traced_logger
 from app.llm.model_factory import chat_llm
@@ -145,8 +146,9 @@ class SkillEnhancedPlanAgent:
         enriched_query_parts.append("请严格按结构化字段输出。")
         enriched_query = "\n\n".join(enriched_query_parts)
 
-        # ── 4. 最终 LLM 生成 ──
-        structured_llm = chat_llm.with_structured_output(
+        # ── 4. 最终 LLM 生成（教案需要更大的 max_tokens） ──
+        plan_llm = chat_llm.bind(max_tokens=settings.plan_agent_max_tokens)
+        structured_llm = plan_llm.with_structured_output(
             SemesterPlanOutput,
             method="json_schema",
         )

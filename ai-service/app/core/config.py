@@ -34,7 +34,8 @@ class Settings(BaseSettings):
     openai_base_url: str = Field(default="https://api.openai.com/v1", description="OpenAI Base URL")
     openai_model: str = Field(default="gpt-4", description="默认模型")
     openai_temperature: float = Field(default=0.7, ge=0, le=2, description="温度参数")
-    openai_max_tokens: int = Field(default=2000, ge=1, le=4000, description="最大Token数")
+    openai_max_tokens: int = Field(default=2000, ge=1, le=16000, description="默认最大Token数")
+    plan_agent_max_tokens: int = Field(default=8000, ge=2000, le=8192, description="教案生成最大Token数（通义千问上限8192）")
     
     # 备用模型配置
     azure_openai_api_key: Optional[str] = Field(default=None, description="Azure OpenAI API Key")
@@ -42,7 +43,7 @@ class Settings(BaseSettings):
     azure_openai_deployment: Optional[str] = Field(default=None, description="Azure OpenAI Deployment")
 
     # 聊天模型配置
-    chat_provider: str = Field(default="ollama", description="聊天模型提供方：ollama 或 mlx")
+    chat_provider: str = Field(default="ollama", description="聊天模型提供方：ollama、mlx 或 openai")
 
     # Ollama 配置
     ollama_base_url: str = Field(default="http://127.0.0.1:11434", description="Ollama Base URL")
