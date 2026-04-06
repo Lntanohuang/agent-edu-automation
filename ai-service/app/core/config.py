@@ -55,7 +55,7 @@ class Settings(BaseSettings):
     mlx_max_tokens: int = Field(default=2000, ge=1, le=8192, description="MLX 生成最大 token 数")
 
     # Embedding 配置
-    embedding_provider: str = Field(default="dashscope", description="Embedding 提供方：dashscope 或 ollama")
+    embedding_provider: str = Field(default="ollama", description="Embedding 提供方：dashscope 或 ollama")
     dashscope_embedding_model: str = Field(default="text-embedding-v3", description="通义千问 Embedding 模型")
 
     # 向量数据库配置
