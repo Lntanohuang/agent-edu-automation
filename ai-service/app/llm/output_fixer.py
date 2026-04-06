@@ -62,15 +62,17 @@ async def try_parse_with_fix(
         ValidationError: 修复后仍无法解析
     """
     logger = get_traced_logger("output_fixer")
+    parse_error: ValidationError | None = None
 
     # 第一次：直接解析（会触发 model_validator 和 field_validator）
     try:
         return target_schema.model_validate_json(raw_json)
-    except ValidationError as first_error:
+    except ValidationError as e:
+        parse_error = e
         logger.warning(
             "output_parse_failed_attempting_fix",
             label=context_label,
-            error_count=first_error.error_count(),
+            error_count=e.error_count(),
             raw_len=len(raw_json),
         )
 
@@ -98,7 +100,7 @@ async def try_parse_with_fix(
 
     fix_human = (
         f"原始 JSON：\n{raw_json}\n\n"
-        f"验证错误：\n{str(first_error)}\n\n"
+        f"验证错误：\n{str(parse_error)}\n\n"
         f"目标 Schema：\n{schema_desc}\n\n"
         "请修复 JSON，只输出结果。"
     )
@@ -133,7 +135,7 @@ async def try_parse_with_fix(
             label=context_label,
             elapsed_s=elapsed,
             fix_error=str(fix_error),
-            original_error=str(first_error),
+            original_error=str(parse_error),
         )
         # 抛出原始错误，不是修复器的错误
-        raise first_error from fix_error
+        raise parse_error from fix_error
