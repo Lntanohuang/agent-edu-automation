@@ -3,16 +3,20 @@
 """
 from typing import Literal
 import re
+import time
 
 from langchain_core.documents import Document
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field, model_validator
 
 from app.core.config import settings
+from app.core.exceptions import LLMError, RetrievalError, ValidationError as PlatformValidationError
+from app.core.logging import get_logger
 from app.core.tracing import traceable
 from app.llm.model_factory import chat_llm
 from app.llm.vector_store import get_rag_vector_store
 
+logger = get_logger(__name__)
 DEFAULT_QUESTION_TYPES = ["单选题", "多选题", "判断题", "填空题", "简答题", "编程题"]
 OBJECTIVE_TYPES = {"单选题", "多选题", "判断题", "填空题", "single_choice", "multiple_choice", "true_false", "fill_blank"}
 SINGLE_CHOICE_TYPES = {"单选题", "single_choice"}
@@ -316,10 +320,23 @@ async def _run_question_generation_pipeline(
     request: QuestionGenerateInput,
     *,
     langsmith_extra: dict | None = None,
+    trace_id: str | None = None,
 ) -> QuestionGenerationResult:
     """
     智能出题主流程：教材检索 -> 结构化生成 -> 校验。
     """
+    trace = trace_id or "-"
+    started_at = time.time()
+    logger.info(
+        "question_pipeline_started",
+        trace_id=trace,
+        subject=request.subject,
+        topic=request.topic,
+        output_mode=request.output_mode,
+        requested_question_count=request.question_count,
+        textbook_scope_count=len(request.textbook_scope),
+    )
+
     request.include_answer = True
     request.include_explanation = True
     request.require_source_citation = True
@@ -331,6 +348,7 @@ async def _run_question_generation_pipeline(
         f"题量：{request.question_count}。模式：{request.output_mode}。"
     )
 
+    retrieval_started_at = time.time()
     if request.textbook_scope:
         scope = [label.strip() for label in request.textbook_scope if label and label.strip()]
         unique_scope = list(dict.fromkeys(scope))
@@ -351,15 +369,28 @@ async def _run_question_generation_pipeline(
                 seen_keys.add(dedup_key)
         retrieved_docs = scoped_docs
         if not retrieved_docs:
-            raise ValueError("指定教材范围未检索到有效内容，请确认教材已索引且 book_label 正确。")
+            raise RetrievalError("指定教材范围未检索到有效内容，请确认教材已索引且 book_label 正确。")
     else:
         retrieved_docs = vector_store.similarity_search(query_text, k=max(12, request.question_count * 2))
+    logger.info(
+        "question_pipeline_retrieval_done",
+        trace_id=trace,
+        elapsed_ms=round((time.time() - retrieval_started_at) * 1000, 1),
+        retrieved_doc_count=len(retrieved_docs),
+    )
 
     if not retrieved_docs:
-        raise ValueError("知识库中没有可用教材内容，请先上传并索引教材。")
+        raise RetrievalError("知识库中没有可用教材内容，请先上传并索引教材。")
 
     labels, sources = _collect_labels_and_sources(retrieved_docs)
     context_text = _build_context_text(retrieved_docs)
+    logger.info(
+        "question_pipeline_context_built",
+        trace_id=trace,
+        book_label_count=len(labels),
+        source_count=len(sources),
+        context_chars=len(context_text),
+    )
 
     structured_llm = chat_llm.with_structured_output(
         GeneratedQuestionSet,
@@ -391,11 +422,25 @@ async def _run_question_generation_pipeline(
         "请严格输出结构化题目。"
     )
 
-    question_set_raw = await structured_llm.ainvoke(
-        [
+    llm_started_at = time.time()
+    try:
+        question_set_raw = await structured_llm.ainvoke([
             SystemMessage(content=system_prompt),
             HumanMessage(content=human_prompt),
-        ]
+        ])
+    except Exception as exc:
+        logger.error(
+            "question_pipeline_llm_failed",
+            trace_id=trace,
+            elapsed_ms=round((time.time() - llm_started_at) * 1000, 1),
+            error=str(exc),
+            exc_info=True,
+        )
+        raise LLMError(f"出题 LLM 调用失败: {exc}", detail={"trace_id": trace}) from exc
+    logger.info(
+        "question_pipeline_llm_done",
+        trace_id=trace,
+        elapsed_ms=round((time.time() - llm_started_at) * 1000, 1),
     )
     question_set = (
         question_set_raw
@@ -409,8 +454,34 @@ async def _run_question_generation_pipeline(
     question_set.subject = request.subject
     question_set.output_mode = request.output_mode
 
-    notes = _validate_questions(question_set, request, retrieved_docs)
+    validate_started_at = time.time()
+    try:
+        notes = _validate_questions(question_set, request, retrieved_docs)
+    except ValueError as exc:
+        logger.error(
+            "question_pipeline_validation_failed",
+            trace_id=trace,
+            error=str(exc),
+        )
+        raise PlatformValidationError(f"题目校验失败: {exc}", detail={"trace_id": trace}) from exc
+    logger.info(
+        "question_pipeline_validation_done",
+        trace_id=trace,
+        elapsed_ms=round((time.time() - validate_started_at) * 1000, 1),
+        validated_question_count=question_set.question_count,
+        validation_note_count=len(notes),
+    )
+
     _normalize_score(question_set, request.output_mode, request.total_score)
+    logger.info(
+        "question_pipeline_completed",
+        trace_id=trace,
+        total_elapsed_ms=round((time.time() - started_at) * 1000, 1),
+        final_question_count=question_set.question_count,
+        final_total_score=question_set.total_score,
+        source_count=len(sources),
+        book_label_count=len(labels),
+    )
 
     return QuestionGenerationResult(
         question_set=question_set,
@@ -423,5 +494,10 @@ async def _run_question_generation_pipeline(
 class QuestionGenerationService:
     """智能出题入口服务。"""
 
-    async def generate(self, request: QuestionGenerateInput) -> QuestionGenerationResult:
-        return await _run_question_generation_pipeline(request)
+    async def generate(
+        self,
+        request: QuestionGenerateInput,
+        *,
+        trace_id: str | None = None,
+    ) -> QuestionGenerationResult:
+        return await _run_question_generation_pipeline(request, trace_id=trace_id)

@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING, List
 
 from langchain_core.documents import Document
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from app.core.logging import get_traced_logger
+from app.core.exceptions import SkillError
 from app.llm.model_factory import chat_llm
 from app.skills.schemas import SkillResponse
 
@@ -100,38 +103,52 @@ class Skill:
 
     async def run(self, query: str, retrieved_docs: List[Document]) -> SkillResponse:
         """执行技能：构建上下文 → LLM 结构化输出 → 格式化 → 返回 SkillResponse。"""
-        context_text = build_context_text(retrieved_docs)
+        logger = get_traced_logger("skill").bind(skill=self.name)
+        logger.info("skill_started", query_len=len(query), doc_count=len(retrieved_docs))
+        t0 = time.perf_counter()
+        try:
+            context_text = build_context_text(retrieved_docs)
 
-        llm = chat_llm.with_structured_output(
-            self.config.output_schema, method="json_schema",
-        )
-        output = await llm.ainvoke([
-            SystemMessage(content=self.config.system_prompt),
-            HumanMessage(content=f"检索上下文：\n{context_text}\n\n用户问题：{query}\n\n请只基于以上检索上下文回答，未涵盖的内容请如实说明。输出结构化结果。"),
-        ])
+            llm = chat_llm.with_structured_output(
+                self.config.output_schema, method="json_schema",
+            )
+            output = await llm.ainvoke([
+                SystemMessage(content=self.config.system_prompt),
+                HumanMessage(content=f"检索上下文：\n{context_text}\n\n用户问题：{query}\n\n请只基于以上检索上下文回答，未涵盖的内容请如实说明。输出结构化结果。"),
+            ])
 
-        parsed = (
-            output
-            if isinstance(output, self.config.output_schema)
-            else self.config.output_schema.model_validate(output)
-        )
+            parsed = (
+                output
+                if isinstance(output, self.config.output_schema)
+                else self.config.output_schema.model_validate(output)
+            )
 
-        answer = self.config.format_answer(parsed)
+            answer = self.config.format_answer(parsed)
 
-        tasks = getattr(parsed, "exploration_tasks", [])
-        tasks = tasks[:3] if tasks else self.config.default_tasks
+            tasks = getattr(parsed, "exploration_tasks", [])
+            tasks = tasks[:3] if tasks else self.config.default_tasks
 
-        confidence = (
-            self.config.confidence_with_docs if retrieved_docs
-            else self.config.confidence_without_docs
-        )
+            confidence = (
+                self.config.confidence_with_docs if retrieved_docs
+                else self.config.confidence_without_docs
+            )
 
-        return SkillResponse(
-            skill_used=self.name,
-            answer=answer,
-            sources=build_sources(retrieved_docs),
-            book_labels=collect_book_labels(retrieved_docs),
-            exploration_tasks=tasks,
-            confidence=confidence,
-            structured_data=parsed.model_dump(),
-        )
+            result = SkillResponse(
+                skill_used=self.name,
+                answer=answer,
+                sources=build_sources(retrieved_docs),
+                book_labels=collect_book_labels(retrieved_docs),
+                exploration_tasks=tasks,
+                confidence=confidence,
+                structured_data=parsed.model_dump(),
+            )
+            elapsed = round(time.perf_counter() - t0, 3)
+            logger.info("skill_completed", elapsed_s=elapsed, answer_len=len(answer))
+            return result
+        except Exception as exc:
+            elapsed = round(time.perf_counter() - t0, 3)
+            logger.error("skill_failed", elapsed_s=elapsed, error=str(exc), exc_info=True)
+            raise SkillError(
+                f"Skill [{self.name}] 执行失败: {exc}",
+                detail={"skill": self.name, "elapsed_s": elapsed},
+            ) from exc

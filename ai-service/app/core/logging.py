@@ -43,3 +43,13 @@ def setup_logging() -> None:
 def get_logger(name: str) -> structlog.stdlib.BoundLogger:
     """获取日志记录器"""
     return structlog.get_logger(name)
+
+
+def get_traced_logger(name: str) -> structlog.stdlib.BoundLogger:
+    """获取自动绑定当前请求 trace_id 的日志记录器。
+
+    在中间件注入 trace_id 后，任何模块调用此函数即可获得
+    带 trace_id 的 BoundLogger，无需手动 .bind()。
+    """
+    from app.core.middleware import trace_id_var
+    return structlog.get_logger(name).bind(trace_id=trace_id_var.get())

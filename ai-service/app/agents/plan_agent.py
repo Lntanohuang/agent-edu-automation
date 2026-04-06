@@ -5,19 +5,19 @@
 """
 
 import asyncio
-import logging
+import time
 from typing import List
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 
+from app.core.exceptions import LLMError
+from app.core.logging import get_traced_logger
 from app.llm.model_factory import chat_llm
 from app.retrieval.query_analyzer import analyze_query
 from app.retrieval.hybrid_retriever import get_hybrid_retriever
 from app.prompts.plan_prompts import lesson_plan_prompt
 from app.skills.registry import get_registered_skills
-
-logger = logging.getLogger(__name__)
 
 # Plan Agent 依赖的 skill 名称（按调用顺序）
 _PLAN_SKILLS = [
@@ -68,6 +68,9 @@ class SkillEnhancedPlanAgent:
     """
 
     async def ainvoke(self, inputs: dict) -> dict:
+        logger = get_traced_logger("plan_agent")
+        trace_id = str(inputs.get("trace_id") or "-") if isinstance(inputs, dict) else "-"
+        started_at = time.time()
         messages = inputs.get("messages", []) if isinstance(inputs, dict) else []
         user_query = ""
         if messages:
@@ -75,11 +78,20 @@ class SkillEnhancedPlanAgent:
             user_query = str(getattr(last_msg, "content", "") or "")
         if not user_query:
             raise ValueError("缺少用户输入")
+        logger.info("plan_agent_started", trace_id=trace_id, query_chars=len(user_query))
 
         # ── 1. 检索教材文档（混合检索） ──
+        retrieval_started_at = time.time()
         hybrid_retriever = get_hybrid_retriever()
         analysis = analyze_query(user_query)
         retrieved_docs = hybrid_retriever.retrieve(user_query, analysis, k=8)
+        logger.info(
+            "plan_agent_retrieval_done",
+            trace_id=trace_id,
+            intent=analysis.intent,
+            retrieved_doc_count=len(retrieved_docs),
+            elapsed_ms=round((time.time() - retrieval_started_at) * 1000, 1),
+        )
 
         # ── 2. 调用 skills 获取领域知识 ──
         all_skills = get_registered_skills()
@@ -88,24 +100,38 @@ class SkillEnhancedPlanAgent:
         async def _run_skill(name: str, skill, query: str, docs):
             try:
                 result = await skill.run(query, docs)
-                logger.info("Plan Agent skill 调用成功: %s", name)
+                logger.info("plan_agent_skill_succeeded", skill=name)
                 return name, result
-            except Exception:
-                logger.exception("Plan Agent skill 调用失败: %s", name)
+            except Exception as exc:
+                logger.error("plan_agent_skill_failed", skill=name, error=str(exc), exc_info=True)
                 return name, None
 
         tasks = []
         for skill_name in _PLAN_SKILLS:
             skill = all_skills.get(skill_name)
             if skill is None:
-                logger.warning("Plan Agent 所需技能未注册: %s", skill_name)
+                logger.warning("plan_agent_skill_not_registered", skill=skill_name)
                 continue
             tasks.append(_run_skill(skill_name, skill, user_query, retrieved_docs))
 
+        skills_started_at = time.time()
         results = await asyncio.gather(*tasks)
+        success_skills = 0
+        failed_skills: list[str] = []
         for name, result in results:
             if result:
                 skill_insights.append(f"=== {name} ===\n{result.answer}")
+                success_skills += 1
+            else:
+                failed_skills.append(name)
+        logger.info(
+            "plan_agent_skills_done",
+            trace_id=trace_id,
+            success_count=success_skills,
+            failed_count=len(failed_skills),
+            failed_skills=failed_skills,
+            elapsed_ms=round((time.time() - skills_started_at) * 1000, 1),
+        )
 
         # ── 3. 组装增强 prompt ──
         skills_context = "\n\n".join(skill_insights) if skill_insights else ""
@@ -125,10 +151,25 @@ class SkillEnhancedPlanAgent:
             method="json_schema",
         )
 
-        structured = await structured_llm.ainvoke([
-            SystemMessage(content=lesson_plan_prompt),
-            HumanMessage(content=enriched_query),
-        ])
+        llm_started_at = time.time()
+        try:
+            structured = await structured_llm.ainvoke([
+                SystemMessage(content=lesson_plan_prompt),
+                HumanMessage(content=enriched_query),
+            ])
+        except Exception as exc:
+            logger.error("plan_agent_llm_failed", trace_id=trace_id, error=str(exc), exc_info=True)
+            raise LLMError(f"教案生成 LLM 调用失败: {exc}", detail={"trace_id": trace_id}) from exc
+        logger.info(
+            "plan_agent_llm_done",
+            trace_id=trace_id,
+            elapsed_ms=round((time.time() - llm_started_at) * 1000, 1),
+        )
+        logger.info(
+            "plan_agent_completed",
+            trace_id=trace_id,
+            total_elapsed_ms=round((time.time() - started_at) * 1000, 1),
+        )
 
         return {"structured_response": structured}
 

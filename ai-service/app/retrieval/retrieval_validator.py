@@ -4,16 +4,15 @@
 不相关时触发 query 重写 + 重试机制。
 """
 
-import logging
+import time
 from typing import List
 
 from langchain_core.documents import Document
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 
+from app.core.logging import get_traced_logger
 from app.llm.model_factory import chat_llm
-
-logger = logging.getLogger(__name__)
 
 
 class RelevanceGrade(BaseModel):
@@ -46,8 +45,18 @@ async def validate_retrieval(
     Returns:
         True 表示检索结果可用，False 表示需要重试
     """
+    logger = get_traced_logger(__name__)
+
     if not docs:
         return False
+
+    t0 = time.perf_counter()
+    logger.info(
+        "retrieval_validation_started",
+        query_preview=query[:50],
+        doc_count=len(docs),
+        threshold=threshold,
+    )
 
     top_docs = docs[:3]
     relevant_count = 0
@@ -72,16 +81,17 @@ async def validate_retrieval(
             if parsed.is_relevant:
                 relevant_count += 1
         except Exception as exc:
-            logger.warning("相关性评分失败，默认相关 error=%s", str(exc))
+            logger.warning("relevance_grading_failed_default_relevant", error=str(exc))
             relevant_count += 1  # 失败时默认相关，避免误判
 
     is_valid = relevant_count >= threshold
     logger.info(
-        "检索验证完成 query=%s relevant=%d total=%d passed=%s",
-        query[:50],
-        relevant_count,
-        len(top_docs),
-        is_valid,
+        "retrieval_validation_completed",
+        query_preview=query[:50],
+        relevant_count=relevant_count,
+        total_checked=len(top_docs),
+        passed=is_valid,
+        elapsed_s=round(time.perf_counter() - t0, 3),
     )
     return is_valid
 
@@ -92,6 +102,8 @@ async def rewrite_query(query: str) -> str:
 
     策略：扩展关键词、补充同义词、明确检索意图。
     """
+    logger = get_traced_logger(__name__)
+    t0 = time.perf_counter()
     llm = chat_llm.with_structured_output(QueryRewrite, method="json_schema")
     try:
         result = await llm.ainvoke([
@@ -108,14 +120,15 @@ async def rewrite_query(query: str) -> str:
         ])
         parsed = result if isinstance(result, QueryRewrite) else QueryRewrite.model_validate(result)
         logger.info(
-            "查询重写完成 original=%s rewritten=%s strategy=%s",
-            query[:50],
-            parsed.rewritten_query[:50],
-            parsed.strategy,
+            "query_rewrite_completed",
+            original_preview=query[:50],
+            rewritten_preview=parsed.rewritten_query[:50],
+            strategy=parsed.strategy,
+            elapsed_s=round(time.perf_counter() - t0, 3),
         )
         return parsed.rewritten_query
     except Exception as exc:
-        logger.warning("查询重写失败，使用原始查询 error=%s", str(exc))
+        logger.warning("query_rewrite_failed_using_original", error=str(exc))
         return query
 
 
@@ -146,6 +159,7 @@ async def retrieve_with_validation(
     """
     from app.retrieval.query_analyzer import analyze_query
 
+    logger = get_traced_logger(__name__)
     original_query = query
     current_query = query
     current_analysis = analysis
@@ -156,15 +170,15 @@ async def retrieve_with_validation(
             return docs
         if attempt < max_retries:
             logger.info(
-                "检索验证未通过，重写查询重试 attempt=%d",
-                attempt + 1,
+                "retrieval_validation_retry",
+                attempt=attempt + 1,
             )
             current_query = await rewrite_query(original_query)
             current_analysis = analyze_query(current_query)
 
     # 所有重试均未通过，返回最后一次检索结果（降级处理）
     logger.warning(
-        "检索验证多次未通过，降级返回最后结果 query=%s",
-        original_query[:50],
+        "retrieval_validation_all_retries_exhausted",
+        query_preview=original_query[:50],
     )
     return docs

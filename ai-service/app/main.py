@@ -7,12 +7,24 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import settings
+from app.core.exceptions import EduPlatformError
 from app.core.logging import get_logger, setup_logging
+from app.core.middleware import RequestTraceMiddleware
 from app.routers import rag, plan_agent, plan_agent_v2, question_generation, feedback
 
 # 设置日志
 setup_logging()
 logger = get_logger(__name__)
+
+
+def _active_chat_model_name() -> str:
+    provider = settings.chat_provider.strip().lower()
+    if provider == "mlx":
+        return settings.mlx_model_path or "mlx-local-model"
+    if provider in {"openai", "qwen_api"}:
+        return settings.openai_model
+    return settings.ollama_qwen_model
+
 
 # 创建 FastAPI 应用
 app = FastAPI(
@@ -32,11 +44,35 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# 请求追踪中间件（注入 trace_id、记录请求耗时）
+app.add_middleware(RequestTraceMiddleware)
 
-# 全局异常处理
+
+# 全局异常处理 — 业务异常
+@app.exception_handler(EduPlatformError)
+async def platform_error_handler(request: Request, exc: EduPlatformError):
+    logger.error(
+        "platform_error",
+        error=exc.message,
+        detail=exc.detail,
+        error_type=type(exc).__name__,
+        path=request.url.path,
+    )
+    return JSONResponse(
+        status_code=500,
+        content={
+            "success": False,
+            "message": exc.message,
+            "error_type": type(exc).__name__,
+            "detail": exc.detail if settings.debug else None,
+        },
+    )
+
+
+# 全局异常处理 — 未知异常
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    logger.error("Unhandled exception", exc_info=exc, path=request.url.path)
+    logger.error("unhandled_error", exc_info=exc, path=request.url.path)
     return JSONResponse(
         status_code=500,
         content={
@@ -55,7 +91,7 @@ async def health_check():
         "status": "healthy",
         "version": settings.app_version,
         "chat_provider": settings.chat_provider,
-        "chat_model": settings.mlx_model_path if settings.chat_provider == "mlx" else settings.ollama_qwen_model,
+        "chat_model": _active_chat_model_name(),
         "embedding_model": settings.ollama_embedding_model,
     }
 
@@ -72,11 +108,11 @@ app.include_router(feedback.router, tags=["用户反馈"])
 async def startup_event():
     """应用启动事件"""
     logger.info(
-        "AI Service started",
+        "ai_service_started",
         app_name=settings.app_name,
         version=settings.app_version,
         chat_provider=settings.chat_provider,
-        chat_model=settings.mlx_model_path if settings.chat_provider == "mlx" else settings.ollama_qwen_model,
+        chat_model=_active_chat_model_name(),
         embedding_model=settings.ollama_embedding_model,
     )
 
@@ -84,7 +120,7 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     """应用关闭事件"""
-    logger.info("AI Service stopped")
+    logger.info("ai_service_stopped")
 
 
 if __name__ == "__main__":

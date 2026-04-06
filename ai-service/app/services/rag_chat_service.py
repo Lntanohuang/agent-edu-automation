@@ -6,6 +6,7 @@ import time
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage, BaseMessage
 
 from app.core.config import settings
+from app.core.exceptions import SkillError, RetrievalError
 from app.core.logging import get_logger
 from app.core.tracing import traceable
 from app.llm.model_factory import chat_llm
@@ -30,6 +31,10 @@ from app.skills.teaching_task_generator.skill import TeachingTaskGeneratorSkill
 logger = get_logger(__name__)
 SUMMARY_EVERY_USER_TURNS = 5
 _MAX_RETRY_ON_LOW_CONFIDENCE = 1
+
+
+def _safe_trace_id(trace_id: str | None) -> str:
+    return trace_id if trace_id else "-"
 
 
 @traceable(
@@ -88,7 +93,7 @@ async def _self_evaluate_answer(
             return None
         return eval_text
     except Exception as exc:
-        logger.warning("Answer self-evaluation failed", error=str(exc))
+        logger.warning("answer_self_evaluation_failed", error=str(exc))
         return None
 
 
@@ -110,8 +115,19 @@ async def _run_rag_pipeline(
     langsmith_extra: dict | None = None,
     source_audit_skill: SourceAuditSkill,
     teaching_task_skill: TeachingTaskGeneratorSkill,
+    trace_id: str | None = None,
 ) -> dict:
     """执行 RAG 主链路：检索 -> 技能生成 -> 审计（低置信度重试一次） -> 质量自评 -> 任务补全。"""
+    trace = _safe_trace_id(trace_id)
+    pipeline_started_at = time.time()
+    logger.info(
+        "rag_pipeline_started",
+        trace_id=trace,
+        query_chars=len(query),
+        has_history_context=bool(history_text),
+        history_context_chars=len(history_text or ""),
+    )
+
     hybrid_retriever = get_hybrid_retriever()
     analysis = analyze_query(query)
     retrieval_query = query
@@ -119,14 +135,38 @@ async def _run_rag_pipeline(
         retrieval_query = f"{query}\n\n历史上下文（精简）:\n{history_text}"
 
     k = get_k_for_intent(analysis.intent)
+    logger.info(
+        "rag_pipeline_query_analyzed",
+        trace_id=trace,
+        intent=analysis.intent,
+        retrieve_top_k=k,
+        hyde_enabled=analysis.hyde_enabled,
+        has_metadata_filters=bool(analysis.metadata_filters),
+        has_query_expansion=bool(analysis.expanded_query and analysis.expanded_query != query),
+    )
 
     # ── 检索验证重试环 ──
     # 先用原始 query 检索，验证相关性；若验证未通过则重写 query 重试一次
     current_query = retrieval_query
     current_analysis = analysis
+    retrieval_started_at = time.time()
     retrieved_docs = hybrid_retriever.retrieve(current_query, current_analysis, k=k)
-    if not await validate_retrieval(query, retrieved_docs):
-        logger.info("检索验证未通过，重写查询重试")
+    logger.info(
+        "rag_pipeline_retrieval_done",
+        trace_id=trace,
+        elapsed_ms=round((time.time() - retrieval_started_at) * 1000, 1),
+        retrieved_doc_count=len(retrieved_docs),
+    )
+
+    validation_passed = await validate_retrieval(query, retrieved_docs)
+    logger.info(
+        "rag_pipeline_validation_done",
+        trace_id=trace,
+        passed=validation_passed,
+        checked_doc_count=min(3, len(retrieved_docs)),
+    )
+    if not validation_passed:
+        logger.info("rag_pipeline_retry_with_rewritten_query", trace_id=trace)
         rewritten = await rewrite_query(query)
         rewritten_analysis = analyze_query(rewritten)
         rewritten_retrieval_query = rewritten
@@ -135,27 +175,69 @@ async def _run_rag_pipeline(
         retry_docs = hybrid_retriever.retrieve(rewritten_retrieval_query, rewritten_analysis, k=k)
         if retry_docs:
             retrieved_docs = retry_docs
-            logger.info("使用重写查询的检索结果 rewritten_query=%s", rewritten[:60])
+            logger.info(
+                "rag_pipeline_rewrite_retry_done",
+                trace_id=trace,
+                rewritten_query_preview=rewritten[:80],
+                retry_doc_count=len(retry_docs),
+            )
 
+    skill_select_started_at = time.time()
     selected_skill = await select_skill(query)
+    logger.info(
+        "rag_pipeline_skill_selected",
+        trace_id=trace,
+        skill_name=selected_skill.name,
+        elapsed_ms=round((time.time() - skill_select_started_at) * 1000, 1),
+    )
     skill_query = query if not history_text else f"历史对话（精简）:\n{history_text}\n\n当前问题：{query}"
-    skill_result = await selected_skill.run(skill_query, retrieved_docs)
+    skill_run_started_at = time.time()
+    try:
+        skill_result = await selected_skill.run(skill_query, retrieved_docs)
+    except SkillError:
+        raise  # Already logged inside Skill.run(), let it propagate
+    except Exception as exc:
+        logger.error("rag_pipeline_skill_unexpected_error", trace_id=trace, skill_name=selected_skill.name, error=str(exc), exc_info=True)
+        raise
+    logger.info(
+        "rag_pipeline_skill_completed",
+        trace_id=trace,
+        skill_name=selected_skill.name,
+        elapsed_ms=round((time.time() - skill_run_started_at) * 1000, 1),
+        source_count=len(skill_result.sources or []),
+        book_label_count=len(skill_result.book_labels or []),
+        exploration_task_count=len(skill_result.exploration_tasks or []),
+    )
 
     # rerank 分数用于置信度评估
     from app.retrieval.reranker import rerank as do_rerank
-    reranked_with_scores = do_rerank(query, retrieved_docs, top_k=len(retrieved_docs))
+    try:
+        reranked_with_scores = do_rerank(query, retrieved_docs, top_k=len(retrieved_docs))
+    except RetrievalError:
+        raise
+    except Exception as exc:
+        logger.warning("rag_pipeline_rerank_failed_skipping", trace_id=trace, error=str(exc))
+        reranked_with_scores = []
     rerank_scores = [s for _, s in reranked_with_scores[:3]] if reranked_with_scores else None
 
+    audit_started_at = time.time()
     audited = source_audit_skill.run(
         answer=skill_result.answer,
         sources=skill_result.sources,
         retrieved_docs=retrieved_docs,
         rerank_scores=rerank_scores,
     )
+    logger.info(
+        "rag_pipeline_source_audit_done",
+        trace_id=trace,
+        elapsed_ms=round((time.time() - audit_started_at) * 1000, 1),
+        confidence=audited.confidence,
+        note_count=len(audited.source_notes or []),
+    )
 
     # ── P1: SourceAudit 反馈循环 — 低置信度时扩大检索重试一次 ──
     if audited.confidence == "low":
-        logger.info("SourceAudit confidence=low, retrying with expanded retrieval (k=12)")
+        logger.info("rag_pipeline_low_confidence_retry_started", trace_id=trace, expanded_top_k=12)
         retry_docs = hybrid_retriever.retrieve(query, analysis, k=12)
         if retry_docs:
             retry_result = await selected_skill.run(skill_query, retry_docs)
@@ -172,20 +254,46 @@ async def _run_rag_pipeline(
                 audited = retry_audited
                 audited.source_notes.append("经扩大检索重试后置信度提升。")
                 retrieved_docs = retry_docs
+                logger.info(
+                    "rag_pipeline_low_confidence_retry_succeeded",
+                    trace_id=trace,
+                    retry_doc_count=len(retry_docs),
+                    confidence=retry_audited.confidence,
+                )
             else:
                 audited.source_notes.append("扩大检索重试后置信度仍为 low。")
+                logger.info(
+                    "rag_pipeline_low_confidence_retry_still_low",
+                    trace_id=trace,
+                    retry_doc_count=len(retry_docs),
+                    confidence=retry_audited.confidence,
+                )
 
     # ── P1: 回答质量自评 ──
+    quality_eval_started_at = time.time()
     quality_note = await _self_evaluate_answer(query, skill_result.answer, langsmith_extra=langsmith_extra)
+    logger.info(
+        "rag_pipeline_quality_eval_done",
+        trace_id=trace,
+        elapsed_ms=round((time.time() - quality_eval_started_at) * 1000, 1),
+        has_quality_note=bool(quality_note),
+    )
     if quality_note:
         skill_result = _append_quality_note(skill_result, quality_note)
         audited.source_notes.append(f"质量自评: {quality_note}")
 
+    task_gen_started_at = time.time()
     generated_tasks = await teaching_task_skill.run(
         query=query,
         answer=skill_result.answer,
         retrieved_docs=retrieved_docs,
         existing_tasks=skill_result.exploration_tasks,
+    )
+    logger.info(
+        "rag_pipeline_task_generation_done",
+        trace_id=trace,
+        elapsed_ms=round((time.time() - task_gen_started_at) * 1000, 1),
+        generated_task_count=len(generated_tasks or []),
     )
 
     answer = audited.audited_answer
@@ -195,6 +303,17 @@ async def _run_rag_pipeline(
             answer = audited.audited_answer
     if skill_result.book_labels:
         answer = f"{answer}\n\n依据书本标签：{', '.join(skill_result.book_labels)}"
+
+    logger.info(
+        "rag_pipeline_completed",
+        trace_id=trace,
+        total_elapsed_ms=round((time.time() - pipeline_started_at) * 1000, 1),
+        skill_used=skill_result.skill_used,
+        confidence=audited.confidence,
+        source_count=len(skill_result.sources or []),
+        exploration_task_count=len(generated_tasks or []),
+        book_label_count=len(skill_result.book_labels or []),
+    )
 
     return {
         "answer": answer,
@@ -239,8 +358,19 @@ class RagChatService:
         conversation_id: str | None,
         max_history_tokens: int,
         langsmith_extra: dict | None = None,
+        trace_id: str | None = None,
     ) -> dict:
         """单轮对话入口：补历史、做摘要、跑 RAG、并落库结果。"""
+        trace = _safe_trace_id(trace_id)
+        chat_started_at = time.time()
+        logger.info(
+            "rag_chat_started",
+            trace_id=trace,
+            conversation_id=conversation_id,
+            input_history_count=len(history_messages),
+            max_history_tokens=max_history_tokens,
+            query_chars=len(query),
+        )
         effective_history_messages = list(history_messages)
         if conversation_id and not effective_history_messages:
             # 前端未传历史时，从 Mongo 回填最近消息用于上下文续写。
@@ -254,6 +384,12 @@ class RagChatService:
                 if msg is not None:
                     restored.append(msg)
             effective_history_messages = restored
+            logger.info(
+                "rag_chat_history_restored_from_mongo",
+                trace_id=trace,
+                conversation_id=conversation_id,
+                restored_count=len(restored),
+            )
 
         # Ensure the current user query is included in this turn context.
         effective_history_messages.append(HumanMessage(content=query))
@@ -262,6 +398,14 @@ class RagChatService:
         recent_history_text = history_to_text(trimmed_history)
         user_turn_count = count_user_turns(effective_history_messages)
         summary_text = ""
+        logger.info(
+            "rag_chat_history_prepared",
+            trace_id=trace,
+            conversation_id=conversation_id,
+            effective_history_count=len(effective_history_messages),
+            trimmed_history_chars=len(recent_history_text),
+            user_turn_count=user_turn_count,
+        )
 
         if conversation_id:
             state = self.summary_store.get_or_create(conversation_id)
@@ -290,9 +434,10 @@ class RagChatService:
                             self.summary_store.persist(conversation_id, state)
                     except Exception as exc:
                         logger.warning(
-                            "RAG history summarization failed",
+                            "rag_history_summarization_failed",
                             error=str(exc),
                             conversation_id=conversation_id,
+                            trace_id=trace,
                         )
 
             summary_text = state.summary
@@ -312,21 +457,38 @@ class RagChatService:
                             langsmith_extra=langsmith_extra,
                         )
                     except Exception as exc:
-                        logger.warning("RAG stateless summarization failed", error=str(exc))
+                        logger.warning("rag_stateless_summarization_failed", error=str(exc), trace_id=trace)
 
         history_context_text = compose_history_context(summary_text, recent_history_text)
+        logger.info(
+            "rag_chat_context_built",
+            trace_id=trace,
+            conversation_id=conversation_id,
+            summary_chars=len(summary_text),
+            recent_history_chars=len(recent_history_text),
+            context_chars=len(history_context_text),
+        )
         result = await _run_rag_pipeline(
             query=query,
             history_text=history_context_text,
             langsmith_extra=langsmith_extra,
             source_audit_skill=self.source_audit_skill,
             teaching_task_skill=self.teaching_task_skill,
+            trace_id=trace,
         )
 
         answer_text = str(result.get("answer") or "").strip()
         if not answer_text:
             raise ValueError("RAG 生成结果为空，请检查检索内容或模型输出。")
         result["answer"] = answer_text
+        logger.info(
+            "rag_chat_answer_ready",
+            trace_id=trace,
+            conversation_id=conversation_id,
+            answer_chars=len(answer_text),
+            skill_used=result.get("skill_used"),
+            confidence=result.get("confidence"),
+        )
 
         # Persist this turn into MongoDB when conversation_id is available.
         if conversation_id:
@@ -347,5 +509,12 @@ class RagChatService:
                     "confidence": result["confidence"],
                 },
             )
+            logger.info("rag_chat_mongo_persisted", trace_id=trace, conversation_id=conversation_id)
 
+        logger.info(
+            "rag_chat_completed",
+            trace_id=trace,
+            conversation_id=conversation_id,
+            total_elapsed_ms=round((time.time() - chat_started_at) * 1000, 1),
+        )
         return result

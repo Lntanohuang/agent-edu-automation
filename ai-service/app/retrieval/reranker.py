@@ -6,12 +6,13 @@ Reranker：对多路召回结果做重排序。
 降级方案：jieba 关键词 + 文本相似度（FlashRank 不可用时自动降级）。
 """
 
-import logging
+import time
 from typing import List, Tuple
 
 from langchain_core.documents import Document
 
-logger = logging.getLogger(__name__)
+from app.core.exceptions import RetrievalError
+from app.core.logging import get_logger, get_traced_logger
 
 # 懒加载 FlashRank
 _ranker = None
@@ -30,10 +31,10 @@ def _get_flashrank_ranker():
             from flashrank import Ranker
             _ranker = Ranker(model_name="ms-marco-MultiBERT-L-12", cache_dir="/tmp/flashrank_cache")
             _flashrank_available = True
-            logger.info("FlashRank Reranker 加载成功: ms-marco-MultiBERT-L-12")
+            get_logger(__name__).info("flashrank_loaded", model="ms-marco-MultiBERT-L-12")
         except Exception as exc:
             _flashrank_available = False
-            logger.warning("FlashRank 不可用，将使用降级方案: %s", str(exc))
+            get_logger(__name__).warning("flashrank_unavailable", error=str(exc))
     return _ranker if _flashrank_available else None
 
 
@@ -132,16 +133,38 @@ def rerank(
     if not docs:
         return []
 
-    ranker = _get_flashrank_ranker()
-    if ranker is not None:
-        scored = _rerank_with_flashrank(ranker, query, docs)
-    else:
-        scored = _rerank_fallback(query, docs)
+    logger = get_traced_logger(__name__)
+    logger.info("rerank_started", doc_count=len(docs), top_k=top_k, use_mmr=use_mmr)
 
-    # MMR 多样性重排
-    if use_mmr and len(scored) > top_k:
-        return mmr_rerank(scored, lambda_param=mmr_lambda, top_k=top_k)
-    return scored[:top_k]
+    t0 = time.perf_counter()
+    try:
+        ranker = _get_flashrank_ranker()
+        if ranker is not None:
+            scored = _rerank_with_flashrank(ranker, query, docs)
+            method = "flashrank"
+        else:
+            scored = _rerank_fallback(query, docs)
+            method = "fallback"
+
+        # MMR 多样性重排
+        if use_mmr and len(scored) > top_k:
+            result = mmr_rerank(scored, lambda_param=mmr_lambda, top_k=top_k)
+        else:
+            result = scored[:top_k]
+
+        elapsed_s = round(time.perf_counter() - t0, 3)
+        logger.info(
+            "rerank_completed",
+            elapsed_s=elapsed_s,
+            input_count=len(docs),
+            output_count=len(result),
+            method=method,
+        )
+        return result
+    except Exception as exc:
+        elapsed_s = round(time.perf_counter() - t0, 3)
+        logger.error("rerank_failed", elapsed_s=elapsed_s, error=str(exc), exc_info=True)
+        raise RetrievalError(f"Rerank failed: {exc}") from exc
 
 
 def _rerank_with_flashrank(

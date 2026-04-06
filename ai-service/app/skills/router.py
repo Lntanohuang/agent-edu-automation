@@ -2,18 +2,17 @@
 
 from __future__ import annotations
 
-import logging
+import time
 from difflib import SequenceMatcher
 from typing import Dict, Optional
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 
+from app.core.logging import get_traced_logger
 from app.llm.model_factory import chat_llm
 from app.skills.base import Skill
 from app.skills.registry import get_registered_skills
-
-logger = logging.getLogger(__name__)
 
 # 懒加载缓存
 _skills: Dict[str, Skill] = {}
@@ -48,6 +47,10 @@ def _build_routing_prompt(skills: Dict[str, Skill]) -> str:
 
 async def select_skill(query: str) -> Skill:
     """使用 LLM 将用户问题路由到最合适的技能。"""
+    logger = get_traced_logger(__name__)
+    t0 = time.perf_counter()
+    logger.info("skill_routing_started", query_preview=query[:60])
+
     skills = _get_skills()
 
     if len(skills) == 1:
@@ -67,23 +70,25 @@ async def select_skill(query: str) -> Skill:
         # 清理 Ollama json_schema 模式偶发的尾部残留字符（如 "law_explain'}"）
         clean_name = parsed.skill_name.strip().rstrip("'\"}")
         if clean_name in skills:
-            logger.info("路由决策: %s (理由: %s)", clean_name, parsed.reason)
+            elapsed_s = round(time.perf_counter() - t0, 3)
+            logger.info("skill_routing_decided", skill=clean_name, reason=parsed.reason, elapsed_s=elapsed_s)
             return skills[clean_name]
-        logger.warning("LLM 返回了未知技能名: %s，回落到默认", parsed.skill_name)
-    except Exception:
-        logger.exception("技能路由 LLM 调用失败，回落到默认技能")
+        logger.warning("skill_routing_unknown_name_fallback", raw_skill_name=parsed.skill_name)
+    except Exception as exc:
+        logger.error("skill_routing_llm_failed_fallback", error=str(exc), exc_info=True)
 
     return _fallback_by_similarity(query, skills)
 
 
 def _fallback_by_similarity(query: str, skills: Dict[str, Skill]) -> Skill:
     """路由 LLM 失败时，用技能描述的文本相似度选最相关技能。"""
+    logger = get_traced_logger(__name__)
     best_name, best_ratio = None, 0.0
     for name, skill in skills.items():
         ratio = SequenceMatcher(None, query, skill.config.description).ratio()
         if ratio > best_ratio:
             best_name, best_ratio = name, ratio
     if best_name:
-        logger.info("Fallback 相似度匹配: %s (%.2f)", best_name, best_ratio)
+        logger.info("skill_routing_similarity_fallback", skill=best_name, ratio=round(best_ratio, 3))
         return skills[best_name]
     return next(iter(skills.values()))
