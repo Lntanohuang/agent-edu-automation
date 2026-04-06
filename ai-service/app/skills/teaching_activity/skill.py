@@ -2,7 +2,7 @@
 
 from typing import List
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.skills.skill_config import SkillConfig
 
@@ -19,9 +19,20 @@ class ActivityItem(BaseModel):
 class TeachingActivityOutput(BaseModel):
     """教学活动设计的结构化输出。"""
 
-    topic_context: str = Field(description="活动针对的知识点或教学主题")
+    @model_validator(mode="before")
+    @classmethod
+    def unwrap_nested(cls, data):
+        """qwen-plus 可能将输出包裹在容器对象中，自动展开。"""
+        if isinstance(data, dict) and len(data) == 1:
+            key = next(iter(data))
+            inner = data[key]
+            if isinstance(inner, dict) and key not in cls.model_fields:
+                return inner
+        return data
+
+    topic_context: str = Field(default="", description="活动针对的知识点或教学主题")
     activities: List[ActivityItem] = Field(default_factory=list, description="推荐的教学活动列表")
-    pedagogical_rationale: str = Field(description="教学法依据（为何选择这些活动）")
+    pedagogical_rationale: str = Field(default="", description="教学法依据（为何选择这些活动）")
     exploration_tasks: List[str] = Field(default_factory=list, description="后续探索任务")
 
 
@@ -45,6 +56,7 @@ config = SkillConfig(
         "你是教学设计专家。请根据给定的知识点和教材内容，推荐3-5个具体可执行的课堂教学活动。"
         "每个活动需说明类型、时长、描述和所需材料。"
         "活动应多样化，覆盖不同教学法（讲授、互动、实践）。"
+        "\n输出必须是扁平 JSON，顶层字段为：topic_context, activities, pedagogical_rationale, exploration_tasks。不要嵌套在其他对象中。"
     ),
     format_answer=_format,
     default_tasks=[

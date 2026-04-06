@@ -2,7 +2,7 @@
 
 from typing import List
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.skills.skill_config import SkillConfig
 
@@ -16,12 +16,23 @@ class ChapterItem(BaseModel):
 class CurriculumOutlineOutput(BaseModel):
     """课程大纲提取的结构化输出。"""
 
-    course_summary: str = Field(description="课程整体概要（2-3句）")
+    course_summary: str = Field(default="", description="课程整体概要（2-3句）")
     topics: List[str] = Field(default_factory=list, description="核心知识点列表")
     chapter_structure: List[ChapterItem] = Field(default_factory=list, description="章节结构")
     key_concepts: List[str] = Field(default_factory=list, description="全课程关键概念")
     prerequisites: List[str] = Field(default_factory=list, description="先修知识要求")
     exploration_tasks: List[str] = Field(default_factory=list, description="后续探索任务")
+
+    @model_validator(mode="before")
+    @classmethod
+    def unwrap_nested(cls, data):
+        """qwen-plus 可能将输出包裹在容器对象中，自动展开。"""
+        if isinstance(data, dict) and len(data) == 1:
+            key = next(iter(data))
+            inner = data[key]
+            if isinstance(inner, dict) and key not in cls.model_fields:
+                return inner
+        return data
 
 
 def _format(parsed: CurriculumOutlineOutput) -> str:
@@ -46,6 +57,7 @@ config = SkillConfig(
         "你是课程设计专家。请从给定教材片段中提取课程大纲结构。"
         "包括：核心知识点、章节组织、关键概念和先修知识。"
         "只基于给定资料提取，不要编造内容。"
+        "输出必须是扁平 JSON，顶层字段为：course_summary, topics, chapter_structure, key_concepts, prerequisites, exploration_tasks。不要嵌套在其他对象中。"
     ),
     format_answer=_format,
     default_tasks=[

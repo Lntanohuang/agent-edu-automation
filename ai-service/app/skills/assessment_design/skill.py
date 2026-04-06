@@ -2,7 +2,7 @@
 
 from typing import List
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.skills.skill_config import SkillConfig
 
@@ -19,12 +19,23 @@ class AssessmentItem(BaseModel):
 class AssessmentDesignOutput(BaseModel):
     """考核方案设计的结构化输出。"""
 
-    course_objectives_summary: str = Field(description="考核对应的教学目标概述")
+    course_objectives_summary: str = Field(default="", description="考核对应的教学目标概述")
     formative_items: List[AssessmentItem] = Field(default_factory=list, description="形成性评价项目")
     summative_items: List[AssessmentItem] = Field(default_factory=list, description="终结性评价项目")
-    weight_distribution: str = Field(description="成绩权重分配说明")
+    weight_distribution: str = Field(default="", description="成绩权重分配说明")
     rubric_notes: List[str] = Field(default_factory=list, description="评分标准要点")
     exploration_tasks: List[str] = Field(default_factory=list, description="后续探索任务")
+
+    @model_validator(mode="before")
+    @classmethod
+    def unwrap_nested(cls, data):
+        """qwen-plus 可能将输出包裹在容器对象中，自动展开。"""
+        if isinstance(data, dict) and len(data) == 1:
+            key = next(iter(data))
+            inner = data[key]
+            if isinstance(inner, dict) and key not in cls.model_fields:
+                return inner
+        return data
 
 
 def _format(parsed: AssessmentDesignOutput) -> str:
@@ -54,6 +65,7 @@ config = SkillConfig(
         "方案应包含形成性评价（过程性考核）和终结性评价（期末考核），"
         "并给出各项权重分配和评分标准要点。"
         "注意考核方式应与教学目标对齐，避免单一化。"
+        "输出必须是扁平 JSON，顶层字段为：course_objectives_summary, formative_items, summative_items, weight_distribution, rubric_notes, exploration_tasks。不要嵌套在其他对象中。"
     ),
     format_answer=_format,
     default_tasks=[

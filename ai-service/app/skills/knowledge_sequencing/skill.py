@@ -2,7 +2,7 @@
 
 from typing import List
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.skills.skill_config import SkillConfig
 
@@ -19,7 +19,18 @@ class SequencedTopic(BaseModel):
 class KnowledgeSequencingOutput(BaseModel):
     """知识点编排的结构化输出。"""
 
-    sequencing_rationale: str = Field(description="编排逻辑说明（为何如此排序）")
+    @model_validator(mode="before")
+    @classmethod
+    def unwrap_nested(cls, data):
+        """qwen-plus 可能将输出包裹在容器对象中，自动展开。"""
+        if isinstance(data, dict) and len(data) == 1:
+            key = next(iter(data))
+            inner = data[key]
+            if isinstance(inner, dict) and key not in cls.model_fields:
+                return inner
+        return data
+
+    sequencing_rationale: str = Field(default="", description="编排逻辑说明（为何如此排序）")
     sequenced_topics: List[SequencedTopic] = Field(default_factory=list, description="按教学顺序排列的知识点")
     milestone_weeks: List[str] = Field(default_factory=list, description="关键节点周（如复习周、实践周）")
     exploration_tasks: List[str] = Field(default_factory=list, description="后续探索任务")
@@ -47,6 +58,7 @@ config = SkillConfig(
         "设计合理的教学顺序。标注每个知识点的认知层次（基础/核心/进阶）"
         "和前置依赖关系。安排应遵循由浅入深、螺旋上升的教学原则。"
         "同时标注关键节点周（复习、实践、阶段测试）。"
+        "\n输出必须是扁平 JSON，顶层字段为：sequencing_rationale, sequenced_topics, milestone_weeks, exploration_tasks。不要嵌套在其他对象中。"
     ),
     format_answer=_format,
     default_tasks=[
