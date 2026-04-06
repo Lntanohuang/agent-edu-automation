@@ -1,5 +1,6 @@
 from typing import Any
 
+import httpx
 from langchain_ollama import ChatOllama, OllamaEmbeddings
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
@@ -20,8 +21,12 @@ def _normalize_ollama_base_url(url: str | None) -> str:
 OLLAMA_BASE_URL = _normalize_ollama_base_url(settings.ollama_base_url)
 OLLAMA_QWEN_URL = _normalize_ollama_base_url(settings.ollama_qwen_url) if settings.ollama_qwen_url else OLLAMA_BASE_URL
 
-# trust_env=False 让 httpx 忽略系统代理
+# trust_env=False 让 httpx 忽略系统代理（macOS System Preferences / Clash 等）
 _NO_PROXY_KWARGS = {"trust_env": False}
+
+# ChatOpenAI / OpenAIEmbeddings 共享的 httpx 客户端（绕过代理 + 5 分钟超时）
+_httpx_client = httpx.Client(trust_env=False, timeout=300.0)
+_httpx_async_client = httpx.AsyncClient(trust_env=False, timeout=300.0)
 
 
 # ── Embedding 模型 ──────────────────────────────────────────
@@ -38,6 +43,8 @@ dashscope_embedding = OpenAIEmbeddings(
     model=settings.dashscope_embedding_model,
     openai_api_key=settings.openai_api_key,
     openai_api_base=settings.openai_base_url,
+    http_client=_httpx_client,
+    http_async_client=_httpx_async_client,
 )
 
 
@@ -76,6 +83,9 @@ openai_compatible_llm = ChatOpenAI(
     temperature=settings.openai_temperature,
     max_tokens=settings.openai_max_tokens,
     max_retries=2,
+    http_client=_httpx_client,
+    http_async_client=_httpx_async_client,
+    timeout=300,
 )
 
 
@@ -105,6 +115,9 @@ def _make_chat_model(max_tokens: int) -> Any:
             temperature=settings.openai_temperature,
             max_tokens=max_tokens,
             max_retries=2,
+            http_client=_httpx_client,
+            http_async_client=_httpx_async_client,
+            timeout=300,
         )
     return ollama_native_qwen_llm
 
