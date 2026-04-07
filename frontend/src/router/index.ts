@@ -28,9 +28,10 @@ const router = createRouter({
           meta: { title: '智能问答', icon: 'ChatDotRound' }
         },
         {
+          // /lesson-plan 指向 V2（Multi-Agent Supervisor，自动入库）
           path: 'lesson-plan',
           name: 'LessonPlanGenerator',
-          component: () => import('../views/LessonPlanGenerator.vue'),
+          component: () => import('../views/LessonPlanGeneratorV2.vue'),
           meta: { title: '智能教案生成', icon: 'Document' }
         },
         {
@@ -40,10 +41,11 @@ const router = createRouter({
           meta: { title: 'RAG 知识库', icon: 'FolderOpened' }
         },
         {
-          path: 'lesson-plan-v2',
-          name: 'LessonPlanGeneratorV2',
-          component: () => import('../views/LessonPlanGeneratorV2.vue'),
-          meta: { title: '教案生成(新)', icon: 'Document' }
+          // 保留旧 V1 页面作为备份，不在侧边栏展示
+          path: 'lesson-plan-v1-legacy',
+          name: 'LessonPlanGeneratorV1Legacy',
+          component: () => import('../views/LessonPlanGenerator.vue'),
+          meta: { title: '教案生成(旧)', hidden: true }
         },
         {
           path: 'question-generator',
