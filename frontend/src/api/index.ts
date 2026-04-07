@@ -307,7 +307,7 @@ export interface RagAgentChatData {
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api',
-  timeout: 180000,
+  timeout: 600000, // 10 分钟，覆盖 plan-agent 最长生成耗时
   headers: {
     'Content-Type': 'application/json'
   }
@@ -315,7 +315,7 @@ const api = axios.create({
 
 const aiApi = axios.create({
   baseURL: import.meta.env.VITE_AI_SERVICE_BASE_URL || 'http://localhost:8000',
-  timeout: 180000
+  timeout: 600000
 })
 
 const isApiResult = <T>(value: unknown): value is ApiResult<T> => {

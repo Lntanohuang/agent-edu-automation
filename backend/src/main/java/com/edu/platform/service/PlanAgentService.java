@@ -18,18 +18,31 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @Slf4j
 @Service
 public class PlanAgentService {
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private static final String PLAN_V1_ENDPOINT = "/plan-agent/generate";
+    private static final String PLAN_V2_ENDPOINT = "/plan-agent-v2/generate";
+    private final RestTemplate restTemplate = buildRestTemplate();
     private final LessonPlanRepository lessonPlanRepository;
+
+    private static RestTemplate buildRestTemplate() {
+        // AI 服务教案生成耗时最长约 6-7 分钟，给 10 分钟读超时留余量
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout((int) Duration.ofSeconds(10).toMillis());
+        factory.setReadTimeout((int) Duration.ofMinutes(10).toMillis());
+        return new RestTemplate(factory);
+    }
 
     @Value("${ai.service.url}")
     private String aiServiceUrl;
@@ -42,17 +55,41 @@ public class PlanAgentService {
 
     @CircuitBreaker(name = "aiService", fallbackMethod = "generatePlanFallback")
     public PlanAgentGenerateResponse generatePlan(PlanAgentGenerateRequest request) {
+        String traceId = UUID.randomUUID().toString().replace("-", "");
+        long startedAt = System.currentTimeMillis();
+        log.info(
+                "[plan-v1] step=received traceId={} subject={} topic={} totalWeeks={} lessonsPerWeek={}",
+                traceId,
+                request.getSubject(),
+                request.getTopic(),
+                request.getTotalWeeks(),
+                request.getLessonsPerWeek()
+        );
         try {
+            long aiStartedAt = System.currentTimeMillis();
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.add("X-Trace-Id", traceId);
 
             Map<String, Object> body = buildRequestBody(request);
+            log.info(
+                    "[plan-v1] step=request_start traceId={} endpoint={} bodyKeys={}",
+                    traceId,
+                    aiServiceUrl + PLAN_V1_ENDPOINT,
+                    body.keySet()
+            );
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
             ResponseEntity<String> response = restTemplate.postForEntity(
-                    aiServiceUrl + "/plan-agent/generate",
+                    aiServiceUrl + PLAN_V1_ENDPOINT,
                     entity,
                     String.class
+            );
+            log.info(
+                    "[plan-v1] step=request_done traceId={} status={} elapsedMs={}",
+                    traceId,
+                    response.getStatusCode(),
+                    System.currentTimeMillis() - aiStartedAt
             );
 
             if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
@@ -75,6 +112,13 @@ public class PlanAgentService {
             Map<String, Object> semesterPlan = semesterPlanObj == null
                     ? Map.of()
                     : semesterPlanObj;
+            log.info(
+                    "[plan-v1] step=response_parsed traceId={} success={} hasSemesterPlan={}",
+                    traceId,
+                    success,
+                    !semesterPlan.isEmpty()
+            );
+            log.info("[plan-v1] step=completed traceId={} totalElapsedMs={}", traceId, System.currentTimeMillis() - startedAt);
 
             return PlanAgentGenerateResponse.builder()
                     .success(true)
@@ -82,7 +126,7 @@ public class PlanAgentService {
                     .semesterPlan(semesterPlan)
                     .build();
         } catch (Exception e) {
-            log.error("调用教案服务失败", e);
+            log.error("[plan-v1] step=error traceId={}", traceId, e);
             if (e instanceof BusinessException businessException) {
                 throw businessException;
             }
@@ -106,17 +150,42 @@ public class PlanAgentService {
      */
     @CircuitBreaker(name = "aiService", fallbackMethod = "generatePlanV2Fallback")
     public PlanAgentV2GenerateResponse generatePlanV2(PlanAgentGenerateRequest request, Long userId) {
+        String traceId = UUID.randomUUID().toString().replace("-", "");
+        long startedAt = System.currentTimeMillis();
+        log.info(
+                "[plan-v2] step=received traceId={} userId={} subject={} topic={} totalWeeks={} lessonsPerWeek={}",
+                traceId,
+                userId,
+                request.getSubject(),
+                request.getTopic(),
+                request.getTotalWeeks(),
+                request.getLessonsPerWeek()
+        );
         try {
+            long aiStartedAt = System.currentTimeMillis();
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.add("X-Trace-Id", traceId);
 
             Map<String, Object> body = buildRequestBody(request);
+            log.info(
+                    "[plan-v2] step=request_start traceId={} endpoint={} bodyKeys={}",
+                    traceId,
+                    aiServiceUrl + PLAN_V2_ENDPOINT,
+                    body.keySet()
+            );
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
             ResponseEntity<String> response = restTemplate.postForEntity(
-                    aiServiceUrl + "/plan-agent-v2/generate",
+                    aiServiceUrl + PLAN_V2_ENDPOINT,
                     entity,
                     String.class
+            );
+            log.info(
+                    "[plan-v2] step=request_done traceId={} status={} elapsedMs={}",
+                    traceId,
+                    response.getStatusCode(),
+                    System.currentTimeMillis() - aiStartedAt
             );
 
             if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
@@ -139,6 +208,13 @@ public class PlanAgentService {
 
             Map<String, Object> semesterPlan = semesterPlanObj == null ? Map.of() : semesterPlanObj;
             Map<String, Object> agentMeta = agentMetaObj == null ? Map.of() : agentMetaObj;
+            log.info(
+                    "[plan-v2] step=response_parsed traceId={} success={} hasSemesterPlan={} hasAgentMeta={}",
+                    traceId,
+                    success,
+                    !semesterPlan.isEmpty(),
+                    !agentMeta.isEmpty()
+            );
 
             // 持久化到 lesson_plans 表
             LessonPlan plan = new LessonPlan();
@@ -155,6 +231,13 @@ public class PlanAgentService {
             plan.setStatus(LessonPlan.Status.generated);
 
             LessonPlan saved = lessonPlanRepository.save(plan);
+            log.info(
+                    "[plan-v2] step=persisted traceId={} planId={} userId={}",
+                    traceId,
+                    saved.getId(),
+                    userId
+            );
+            log.info("[plan-v2] step=completed traceId={} totalElapsedMs={}", traceId, System.currentTimeMillis() - startedAt);
 
             return PlanAgentV2GenerateResponse.builder()
                     .success(true)
@@ -164,7 +247,7 @@ public class PlanAgentService {
                     .agentMeta(agentMeta)
                     .build();
         } catch (Exception e) {
-            log.error("调用教案V2服务失败", e);
+            log.error("[plan-v2] step=error traceId={} userId={}", traceId, userId, e);
             if (e instanceof BusinessException businessException) {
                 throw businessException;
             }

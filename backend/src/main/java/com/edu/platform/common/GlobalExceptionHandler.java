@@ -2,6 +2,7 @@ package com.edu.platform.common;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.catalina.connector.ClientAbortException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
@@ -50,6 +51,14 @@ public class GlobalExceptionHandler {
     public Result<Void> handleHttpMessageNotReadableException(HttpMessageNotReadableException e, HttpServletRequest request) {
         log.warn("请求体格式错误 [{}] - {}", request.getRequestURI(), e.getMessage());
         return Result.badRequest("请求体格式错误");
+    }
+
+    /**
+     * 客户端主动断开连接（浏览器关闭/超时），不是真正的系统异常，降级为 debug 日志。
+     */
+    @ExceptionHandler(ClientAbortException.class)
+    public void handleClientAbort(ClientAbortException e, HttpServletRequest request) {
+        log.debug("客户端断开连接 [{}] - {}", request.getRequestURI(), e.getMessage());
     }
 
     @ExceptionHandler(Exception.class)
