@@ -7,18 +7,22 @@ import time
 
 from langchain_core.documents import Document
 from langchain_core.messages import HumanMessage, SystemMessage
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.core.config import settings
 from app.core.exceptions import LLMError, RetrievalError, ValidationError as PlatformValidationError
 from app.core.logging import get_logger
 from app.core.tracing import traceable
-from app.llm.model_factory import chat_llm
-from app.llm.structured_output import get_structured_output_method
+from app.llm.model_factory import skill_llm
+from app.llm.output_fixer import try_parse_with_fix
+from app.llm.structured_output import (
+    build_format_constrained_human_suffix,
+    build_format_constrained_system_prompt,
+)
 from app.llm.vector_store import get_rag_vector_store
 
 logger = get_logger(__name__)
-DEFAULT_QUESTION_TYPES = ["单选题", "多选题", "判断题", "填空题", "简答题", "编程题"]
+DEFAULT_QUESTION_TYPES = ["单选题", "多选题", "判断题", "填空题", "简答题", "案例分析题"]
 OBJECTIVE_TYPES = {"单选题", "多选题", "判断题", "填空题", "single_choice", "multiple_choice", "true_false", "fill_blank"}
 SINGLE_CHOICE_TYPES = {"单选题", "single_choice"}
 MULTIPLE_CHOICE_TYPES = {"多选题", "multiple_choice"}
@@ -41,7 +45,7 @@ class DifficultyDistribution(BaseModel):
 
 
 class QuestionGenerateInput(BaseModel):
-    subject: str = Field(default="大学计算机", description="学科方向")
+    subject: str = Field(default="劳动法", description="学科方向")
     topic: str = Field(default="教材重点章节", description="题目主题")
     textbook_scope: list[str] = Field(default_factory=list, description="教材标签过滤")
     question_count: int = Field(default=10, ge=1, le=50, description="题目数量")
@@ -75,14 +79,44 @@ class GeneratedQuestion(BaseModel):
     score: float = Field(default=10.0, ge=0, description="题目分值")
     answer_uniqueness: str = Field(default="not_required", description="答案唯一性要求")
 
+    @field_validator("answer", mode="before")
+    @classmethod
+    def coerce_answer(cls, v):
+        """qwen-plus 多选题答案常返回 ['A','B','C'] list，这里合并为逗号字符串。"""
+        if isinstance(v, list):
+            return ",".join(str(x) for x in v)
+        if v is None:
+            return ""
+        return str(v)
+
+    @field_validator("options", "knowledge_points", mode="before")
+    @classmethod
+    def coerce_string_list(cls, v):
+        if v is None:
+            return []
+        if isinstance(v, str):
+            return [v]
+        return v
+
 
 class GeneratedQuestionSet(BaseModel):
     title: str = Field(default="", description="题集标题")
-    subject: str = Field(default="大学计算机", description="学科")
+    subject: str = Field(default="劳动法", description="学科")
     output_mode: str = Field(default="practice", description="模式")
     question_count: int = Field(default=0, description="题目数量")
     total_score: float = Field(default=0.0, description="总分")
     questions: list[GeneratedQuestion] = Field(default_factory=list, description="题目列表")
+
+    @model_validator(mode="before")
+    @classmethod
+    def unwrap_nested(cls, data):
+        """qwen-plus 可能将输出包裹在容器对象中（如 {"question_set": {...}}）。"""
+        if isinstance(data, dict) and len(data) == 1:
+            key = next(iter(data))
+            inner = data[key]
+            if isinstance(inner, dict) and key not in cls.model_fields:
+                return inner
+        return data
 
 
 class QuestionGenerationResult(BaseModel):
@@ -393,22 +427,19 @@ async def _run_question_generation_pipeline(
         context_chars=len(context_text),
     )
 
-    structured_llm = chat_llm.with_structured_output(
-        GeneratedQuestionSet,
-        method=get_structured_output_method(),
-    )
-
-    system_prompt = (
-        "你是一名大学计算机课程命题专家。请仅基于给定教材片段出题，不要编造出处。\n"
+    base_system_prompt = (
+        f"你是一名法学课程命题专家。请仅基于给定教材/法规片段出题，不要编造法条或案例出处。\n"
+        f"当前学科：{request.subject}\n"
         "必须遵守：\n"
         "1) 每题都要可解。\n"
         "2) 单选/多选/填空/判断题需可判定，答案唯一或标准明确。\n"
-        "3) 每题必须给出答案(answer)与解析(explanation)。\n"
-        "4) 每题必须给出 source_citations，至少 1 条，且包含书本标签与片段。\n"
-        "5) 输出字段严格匹配结构化 schema，不要额外字段。\n"
-        "6) 结构化输出必须是合法 json（小写 json），不要输出额外文本。"
+        "3) 每题必须给出答案(answer)与解析(explanation)；案例分析题需给出要点式参考答案。\n"
+        "4) answer 字段必须是字符串类型，不得为数组；多选题答案写成 'A,B,C' 形式。\n"
+        "5) 每题必须给出 source_citations，至少 1 条，且包含书本/法规标签与原文片段。\n"
+        "6) 输出字段严格匹配结构化 schema，不要额外字段。\n"
+        "7) 结构化输出必须是合法 json（小写 json），不要输出额外文本。"
     )
-    human_prompt = (
+    base_human_prompt = (
         f"出题需求：\n"
         f"- 学科：{request.subject}\n"
         f"- 主题：{request.topic}\n"
@@ -424,12 +455,28 @@ async def _run_question_generation_pipeline(
         "请严格输出结构化题目，并确保返回合法 json。"
     )
 
+    # 四层防御：
+    # 第1层 手动 json_object 模式 (不用 with_structured_output, 避免其内部重置 bind)
+    # 第2层 prompt 严格格式约束 (开头 + 结尾)
+    # 第3层 Pydantic validators 自动转 list→str / 容器解包
+    # 第4层 try_parse_with_fix: 失败时调用 qwen-turbo 修复
+    llm = skill_llm.bind(response_format={"type": "json_object"})
+    constrained_system = build_format_constrained_system_prompt(
+        base_system_prompt, schema=GeneratedQuestionSet
+    )
+    human_content = f"{base_human_prompt}\n\n{build_format_constrained_human_suffix()}"
+
     llm_started_at = time.time()
     try:
-        question_set_raw = await structured_llm.ainvoke([
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=human_prompt),
+        raw_response = await llm.ainvoke([
+            SystemMessage(content=constrained_system),
+            HumanMessage(content=human_content),
         ])
+        question_set = await try_parse_with_fix(
+            raw_response.content,
+            GeneratedQuestionSet,
+            context_label="question_generation",
+        )
     except Exception as exc:
         logger.error(
             "question_pipeline_llm_failed",
@@ -443,11 +490,6 @@ async def _run_question_generation_pipeline(
         "question_pipeline_llm_done",
         trace_id=trace,
         elapsed_ms=round((time.time() - llm_started_at) * 1000, 1),
-    )
-    question_set = (
-        question_set_raw
-        if isinstance(question_set_raw, GeneratedQuestionSet)
-        else GeneratedQuestionSet.model_validate(question_set_raw)
     )
 
     if not question_set.title.strip():

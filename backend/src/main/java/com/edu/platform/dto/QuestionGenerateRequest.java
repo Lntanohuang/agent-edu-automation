@@ -13,7 +13,7 @@ import java.util.List;
 public class QuestionGenerateRequest {
 
     @NotBlank(message = "学科不能为空")
-    private String subject = "大学计算机";
+    private String subject = "劳动法";
 
     private String topic = "教材重点章节";
 
@@ -23,7 +23,7 @@ public class QuestionGenerateRequest {
     @Max(value = 50, message = "题量不能超过 50")
     private Integer questionCount = 10;
 
-    private List<String> questionTypes = new ArrayList<>(List.of("单选题", "多选题", "判断题", "填空题", "简答题", "编程题"));
+    private List<String> questionTypes = new ArrayList<>(List.of("单选题", "多选题", "判断题", "填空题", "简答题", "案例分析题"));
 
     @Valid
     private DifficultyDistribution difficultyDistribution = new DifficultyDistribution();

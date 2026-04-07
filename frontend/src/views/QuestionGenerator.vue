@@ -12,7 +12,7 @@
 
           <el-form label-position="top">
             <el-form-item label="学科">
-              <el-input v-model="form.subject" placeholder="大学计算机" />
+              <el-input v-model="form.subject" placeholder="劳动法" />
             </el-form-item>
 
             <el-form-item label="主题">
@@ -211,10 +211,10 @@ import {
 } from '../api'
 import { EditPen } from '@element-plus/icons-vue'
 
-const questionTypeOptions = ['单选题', '多选题', '判断题', '填空题', '简答题', '编程题']
+const questionTypeOptions = ['单选题', '多选题', '判断题', '填空题', '简答题', '案例分析题']
 
 const form = reactive({
-  subject: '大学计算机',
+  subject: '劳动法',
   topic: '教材重点章节',
   textbookScope: [] as string[],
   questionCount: 10,

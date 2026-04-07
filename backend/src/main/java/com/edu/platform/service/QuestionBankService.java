@@ -22,31 +22,58 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class QuestionBankService {
 
+    private static final String QUESTION_GENERATE_ENDPOINT = "/question-gen/generate";
     private final QuestionGenerationDraftRepository draftRepository;
     private final QuestionBankItemRepository questionBankItemRepository;
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate = buildRestTemplate();
 
     @Value("${ai.service.url}")
     private String aiServiceUrl;
 
-    @Transactional
+    private static RestTemplate buildRestTemplate() {
+        // AI 出题耗时最长 ~2-3 分钟，给 10 分钟读超时留余量
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout((int) Duration.ofSeconds(10).toMillis());
+        factory.setReadTimeout((int) Duration.ofMinutes(10).toMillis());
+        return new RestTemplate(factory);
+    }
+
+    /**
+     * 生成题目：AI 调用在事务外，仅持久化步骤进入事务，避免
+     * Hikari apparent connection leak（长耗时 AI 调用期间占用连接池）。
+     */
     public QuestionGenerateResponse generate(Long userId, QuestionGenerateRequest request) {
-        JSONObject aiObject = callQuestionGeneration(request);
+        String traceId = UUID.randomUUID().toString().replace("-", "");
+        long startedAt = System.currentTimeMillis();
+        log.info(
+                "[question-gen] step=received traceId={} userId={} subject={} topic={} outputMode={} questionCount={}",
+                traceId,
+                userId,
+                request.getSubject(),
+                request.getTopic(),
+                request.getOutputMode(),
+                request.getQuestionCount()
+        );
+
+        JSONObject aiObject = callQuestionGeneration(request, traceId);
         JSONObject questionSet = aiObject.getJSONObject("question_set");
         if (questionSet == null) {
             throw new BusinessException(503, "出题服务返回为空");
@@ -56,19 +83,23 @@ public class QuestionBankService {
         if (actualCount == 0) {
             throw new BusinessException(503, "出题服务未返回题目");
         }
+        log.info(
+                "[question-gen] step=response_parsed traceId={} actualQuestionCount={} sourceCount={} bookLabelCount={} validationNoteCount={}",
+                traceId,
+                actualCount,
+                toStringList(aiObject.getJSONArray("sources")).size(),
+                toStringList(aiObject.getJSONArray("book_labels")).size(),
+                toStringList(aiObject.getJSONArray("validation_notes")).size()
+        );
 
-        QuestionGenerationDraft draft = new QuestionGenerationDraft();
-        draft.setUserId(userId);
-        draft.setSubject(request.getSubject());
-        draft.setTopic(request.getTopic());
-        draft.setTextbookScope(JSON.toJSONString(request.getTextbookScope()));
-        draft.setGenerationMode(parseMode(request.getOutputMode()));
-        draft.setQuestionCount(actualCount);
-        draft.setTotalScore(request.getTotalScore());
-        draft.setReviewStatus(QuestionGenerationDraft.ReviewStatus.pending);
-        draft.setTitle(resolveTitle(questionSet, request));
-        draft.setAiPayload(aiObject.toJSONString());
-        draftRepository.save(draft);
+        QuestionGenerationDraft draft = persistDraft(userId, request, questionSet, aiObject, actualCount);
+        log.info(
+                "[question-gen] step=draft_persisted traceId={} draftId={} reviewStatus={}",
+                traceId,
+                draft.getId(),
+                draft.getReviewStatus()
+        );
+        log.info("[question-gen] step=completed traceId={} totalElapsedMs={}", traceId, System.currentTimeMillis() - startedAt);
 
         return QuestionGenerateResponse.builder()
                 .draftId(draft.getId())
@@ -81,6 +112,31 @@ public class QuestionBankService {
                 .sources(toStringList(aiObject.getJSONArray("sources")))
                 .validationNotes(toStringList(aiObject.getJSONArray("validation_notes")))
                 .build();
+    }
+
+    /**
+     * 持久化草稿。Spring Data JPA 的 save() 自带短事务，无需手动 @Transactional
+     * 包裹，避免事务延展到上游的 AI 长耗时调用。
+     */
+    private QuestionGenerationDraft persistDraft(
+            Long userId,
+            QuestionGenerateRequest request,
+            JSONObject questionSet,
+            JSONObject aiObject,
+            int actualCount
+    ) {
+        QuestionGenerationDraft draft = new QuestionGenerationDraft();
+        draft.setUserId(userId);
+        draft.setSubject(request.getSubject());
+        draft.setTopic(request.getTopic());
+        draft.setTextbookScope(JSON.toJSONString(request.getTextbookScope()));
+        draft.setGenerationMode(parseMode(request.getOutputMode()));
+        draft.setQuestionCount(actualCount);
+        draft.setTotalScore(request.getTotalScore());
+        draft.setReviewStatus(QuestionGenerationDraft.ReviewStatus.pending);
+        draft.setTitle(resolveTitle(questionSet, request));
+        draft.setAiPayload(aiObject.toJSONString());
+        return draftRepository.save(draft);
     }
 
     public Page<Map<String, Object>> listDrafts(Long userId, Pageable pageable) {
@@ -161,15 +217,28 @@ public class QuestionBankService {
     }
 
     @CircuitBreaker(name = "aiService", fallbackMethod = "callQuestionGenerationFallback")
-    private JSONObject callQuestionGeneration(QuestionGenerateRequest request) {
+    private JSONObject callQuestionGeneration(QuestionGenerateRequest request, String traceId) {
         try {
+            long aiStartedAt = System.currentTimeMillis();
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.add("X-Trace-Id", traceId);
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(buildAiRequestBody(request), headers);
+            log.info(
+                    "[question-gen] step=request_start traceId={} endpoint={}",
+                    traceId,
+                    aiServiceUrl + QUESTION_GENERATE_ENDPOINT
+            );
             ResponseEntity<String> response = restTemplate.postForEntity(
-                    aiServiceUrl + "/question-gen/generate",
+                    aiServiceUrl + QUESTION_GENERATE_ENDPOINT,
                     entity,
                     String.class
+            );
+            log.info(
+                    "[question-gen] step=request_done traceId={} status={} elapsedMs={}",
+                    traceId,
+                    response.getStatusCode(),
+                    System.currentTimeMillis() - aiStartedAt
             );
             if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
                 throw new BusinessException(503, "出题服务响应异常");
@@ -184,7 +253,7 @@ public class QuestionBankService {
             }
             return aiObject;
         } catch (Exception e) {
-            log.error("调用出题服务失败", e);
+            log.error("[question-gen] step=request_error traceId={}", traceId, e);
             if (e instanceof BusinessException businessException) {
                 throw businessException;
             }
@@ -192,8 +261,8 @@ public class QuestionBankService {
         }
     }
 
-    private JSONObject callQuestionGenerationFallback(QuestionGenerateRequest request, Throwable ex) {
-        log.warn("出题 AI 服务熔断降级, topic={}, error={}", request.getTopic(), ex.getMessage());
+    private JSONObject callQuestionGenerationFallback(QuestionGenerateRequest request, String traceId, Throwable ex) {
+        log.warn("出题 AI 服务熔断降级, traceId={}, topic={}, error={}", traceId, request.getTopic(), ex.getMessage());
         throw new BusinessException(503, "AI 服务暂时不可用，请稍后重试");
     }
 
@@ -204,7 +273,7 @@ public class QuestionBankService {
         body.put("textbook_scope", request.getTextbookScope() == null ? List.of() : request.getTextbookScope());
         body.put("question_count", request.getQuestionCount());
         body.put("question_types", request.getQuestionTypes() == null || request.getQuestionTypes().isEmpty()
-                ? List.of("单选题", "多选题", "判断题", "填空题", "简答题", "编程题")
+                ? List.of("单选题", "多选题", "判断题", "填空题", "简答题", "案例分析题")
                 : request.getQuestionTypes());
         body.put("output_mode", request.getOutputMode() == null ? "practice" : request.getOutputMode());
         body.put("total_score", request.getTotalScore());
