@@ -19,13 +19,27 @@
             size="default"
           >
             <el-form-item label="学科" prop="subject">
-              <el-select v-model="form.subject" placeholder="选择学科" style="width: 100%">
+              <el-select
+                v-model="form.subject"
+                placeholder="可选择或手动输入学科/课程方向"
+                filterable
+                allow-create
+                default-first-option
+                style="width: 100%"
+              >
                 <el-option v-for="s in subjects" :key="s" :label="s" :value="s" />
               </el-select>
             </el-form-item>
 
             <el-form-item label="年级" prop="grade">
-              <el-select v-model="form.grade" placeholder="选择年级" style="width: 100%">
+              <el-select
+                v-model="form.grade"
+                placeholder="可选择或手动输入年级"
+                filterable
+                allow-create
+                default-first-option
+                style="width: 100%"
+              >
                 <el-option v-for="g in grades" :key="g" :label="g" :value="g" />
               </el-select>
             </el-form-item>
@@ -341,8 +355,8 @@ const skillLabels: Record<string, string> = {
 }
 
 const rules: FormRules = {
-  subject: [{ required: true, message: '请选择学科', trigger: 'change' }],
-  grade: [{ required: true, message: '请选择年级', trigger: 'change' }],
+  subject: [{ required: true, message: '请输入或选择学科', trigger: 'change' }],
+  grade: [{ required: true, message: '请输入或选择年级', trigger: 'change' }],
   topic: [{ required: true, message: '请输入学期主题', trigger: 'blur' }],
 }
 

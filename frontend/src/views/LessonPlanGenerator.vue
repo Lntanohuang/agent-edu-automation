@@ -13,7 +13,14 @@
           
           <el-form :model="form" label-position="top" :rules="rules" ref="formRef">
             <el-form-item label="课程方向" prop="subject">
-              <el-select v-model="form.subject" placeholder="选择法学课程方向" style="width: 100%">
+              <el-select
+                v-model="form.subject"
+                placeholder="可选择或手动输入课程方向"
+                filterable
+                allow-create
+                default-first-option
+                style="width: 100%"
+              >
                 <el-option
                   v-for="subject in subjects"
                   :key="subject"
@@ -24,7 +31,14 @@
             </el-form-item>
             
             <el-form-item label="适用年级" prop="grade">
-              <el-select v-model="form.grade" placeholder="选择大学年级/学段" style="width: 100%">
+              <el-select
+                v-model="form.grade"
+                placeholder="可选择或手动输入适用年级"
+                filterable
+                allow-create
+                default-first-option
+                style="width: 100%"
+              >
                 <el-option
                   v-for="grade in grades"
                   :key="grade"
@@ -344,8 +358,8 @@ const form = reactive({
 })
 
 const rules = {
-  subject: [{ required: true, message: '请选择课程方向', trigger: 'change' }],
-  grade: [{ required: true, message: '请选择适用年级', trigger: 'change' }],
+  subject: [{ required: true, message: '请输入或选择课程方向', trigger: 'change' }],
+  grade: [{ required: true, message: '请输入或选择适用年级', trigger: 'change' }],
   topic: [{ required: true, message: '请输入课题', trigger: 'blur' }],
   courseType: [{ required: true, message: '请选择课程性质', trigger: 'change' }],
   assessmentMode: [{ required: true, message: '请选择考核方式', trigger: 'change' }]

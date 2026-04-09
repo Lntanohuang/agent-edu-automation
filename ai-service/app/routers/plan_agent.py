@@ -1,9 +1,11 @@
 """
 教案 Agent 路由
 """
+import time
+import uuid
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from langchain_core.messages import HumanMessage
 from pydantic import BaseModel, Field
 
@@ -50,15 +52,30 @@ async def _run_plan_pipeline(
     user_query: str,
     *,
     langsmith_extra: dict | None = None,
+    trace_id: str | None = None,
 ) -> dict:
-    return await plan_agent.ainvoke({"messages": [HumanMessage(content=user_query)]})
+    return await plan_agent.ainvoke(
+        {"messages": [HumanMessage(content=user_query)], "trace_id": trace_id}
+    )
 
 
 @router.post("/generate", response_model=PlanAgentGenerateResponse)
-async def generate_lesson_plan_by_agent(request: PlanAgentGenerateRequest):
+async def generate_lesson_plan_by_agent(request: PlanAgentGenerateRequest, raw_request: Request):
     """
     使用教案 Agent 生成结构化整学期教案
     """
+    trace_id = raw_request.headers.get("x-trace-id") or uuid.uuid4().hex[:16]
+    started_at = time.time()
+    logger.info(
+        "plan_agent_generate_received",
+        trace_id=trace_id,
+        subject=request.subject,
+        grade=request.grade,
+        topic=request.topic,
+        total_weeks=request.total_weeks,
+        lessons_per_week=request.lessons_per_week,
+    )
+
     user_query = (
         f"请生成一份整学期教案规划。"
         f"\n学科：{request.subject}"
@@ -80,7 +97,11 @@ async def generate_lesson_plan_by_agent(request: PlanAgentGenerateRequest):
 
     try:
         langsmith_extra = {"project_name": request.trace_project_name} if request.trace_project_name else None
-        result = await _run_plan_pipeline(user_query, langsmith_extra=langsmith_extra)
+        result = await _run_plan_pipeline(
+            user_query,
+            langsmith_extra=langsmith_extra,
+            trace_id=trace_id,
+        )
         structured = result.get("structured_response") if isinstance(result, dict) else None
 
         if isinstance(structured, SemesterPlanOutput):
@@ -90,13 +111,25 @@ async def generate_lesson_plan_by_agent(request: PlanAgentGenerateRequest):
         else:
             raise ValueError("Agent 未返回 structured_response")
 
+        logger.info(
+            "plan_agent_generate_succeeded",
+            trace_id=trace_id,
+            elapsed_ms=round((time.time() - started_at) * 1000, 1),
+            semester_weeks=len(semester_plan.get("weekly_plans", [])) if isinstance(semester_plan, dict) else 0,
+        )
+
         return PlanAgentGenerateResponse(
             success=True,
             message="生成成功",
             semester_plan=semester_plan,
         )
     except Exception as exc:
-        logger.error("Plan agent generate failed", error=str(exc))
+        logger.error(
+            "plan_agent_generate_failed",
+            trace_id=trace_id,
+            elapsed_ms=round((time.time() - started_at) * 1000, 1),
+            error=str(exc),
+        )
         return PlanAgentGenerateResponse(
             success=False,
             message=f"生成失败: {str(exc)}",
