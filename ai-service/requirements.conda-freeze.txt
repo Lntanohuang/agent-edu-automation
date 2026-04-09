@@ -1,0 +1,209 @@
+aiohappyeyeballs @ file:///home/conda/feedstock_root/build_artifacts/aiohappyeyeballs_1741775197943/work
+aiohttp @ file:///Users/runner/miniforge3/conda-bld/aiohttp_1767524621135/work
+aiosignal @ file:///home/conda/feedstock_root/build_artifacts/aiosignal_1751626463503/work
+annotated-doc==0.0.4
+annotated-types @ file:///home/conda/feedstock_root/build_artifacts/annotated-types_1733247046149/work
+anthropic==0.76.0
+anyio @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_anyio_1767719033/work
+appnope==0.1.4
+asttokens==3.0.1
+attrs @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_attrs_1764875182/work
+Automat==25.4.16
+backcall==0.2.0
+backoff==2.2.1
+backports.zstd @ file:///Users/runner/miniforge3/conda-bld/bld/rattler-build_backports.zstd_1767045000/work
+bcrypt==5.0.0
+beautifulsoup4 @ file:///home/conda/feedstock_root/build_artifacts/beautifulsoup4_1764520477956/work
+bleach==6.3.0
+broadwick==1.2.0
+Brotli @ file:///Users/runner/miniforge3/conda-bld/brotli-split_1764017116075/work
+build==1.4.0
+certifi @ file:///home/conda/feedstock_root/build_artifacts/certifi_1767500808759/work/certifi
+cffi @ file:///Users/runner/miniforge3/conda-bld/cffi_1761202952988/work
+charset-normalizer @ file:///home/conda/feedstock_root/build_artifacts/charset-normalizer_1760437218288/work
+chromadb==1.4.1
+click==8.3.1
+colorama @ file:///home/conda/feedstock_root/build_artifacts/colorama_1733218098505/work
+coloredlogs==15.0.1
+constantly==23.10.4
+cryptography @ file:///Users/runner/miniforge3/conda-bld/cryptography-split_1769650299066/work
+dashscope @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_dashscope_1769673459/work
+dataclasses-json==0.6.7
+decorator==5.2.1
+defusedxml==0.7.1
+distro @ file:///home/conda/feedstock_root/build_artifacts/distro_1734729835256/work
+docopt==0.6.2
+docstring_parser==0.17.0
+docx2txt==0.9
+durationpy==0.10
+exceptiongroup @ file:///home/conda/feedstock_root/build_artifacts/exceptiongroup_1763918002538/work
+executing==2.2.1
+faiss-cpu==1.13.2
+fastapi==0.128.0
+fastjsonschema==2.21.2
+filelock==3.20.3
+flatbuffers==25.12.19
+frozenlist==1.8.0
+fsspec==2026.1.0
+googleapis-common-protos==1.72.0
+grpcio==1.76.0
+h11 @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_h11_1767729720/work
+h2 @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_h2_1756364871/work
+hf-xet==1.2.0
+hpack @ file:///home/conda/feedstock_root/build_artifacts/hpack_1737618293087/work
+httpcore @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_httpcore_1745602916/work
+httptools==0.7.1
+httpx @ file:///home/conda/feedstock_root/build_artifacts/httpx_1733663348460/work
+httpx-sse==0.4.3
+huggingface_hub==1.3.7
+humanfriendly==10.0
+hyperframe @ file:///home/conda/feedstock_root/build_artifacts/hyperframe_1737618333194/work
+hyperlink==21.0.0
+idna @ file:///home/conda/feedstock_root/build_artifacts/idna_1760286409563/work
+importlib_metadata==8.7.1
+importlib_resources==6.5.2
+Incremental==24.11.0
+ipython==8.12.3
+jedi==0.19.2
+Jinja2==3.1.6
+jiter @ file:///Users/runner/miniforge3/conda-bld/jiter_1763006768165/work
+jsonpatch @ file:///home/conda/feedstock_root/build_artifacts/jsonpatch_1733814567314/work
+jsonpointer @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_jsonpointer_1765026384/work
+jsonschema==4.26.0
+jsonschema-specifications==2025.9.1
+jupyter_client==8.8.0
+jupyter_core==5.9.1
+jupyterlab_pygments==0.3.0
+kubernetes==35.0.0
+langchain==1.2.6
+langchain-anthropic==1.3.1
+langchain-chroma==1.1.0
+langchain-classic==1.0.1
+langchain-community==0.4.1
+
+# 文档解析（RAG必需）
+python-docx==1.1.0
+unstructured==0.12.0
+pdf2image==1.17.0
+pillow==10.2.0
+langchain-core @ file:///home/conda/feedstock_root/build_artifacts/langchain-core_1767999812173/work
+langchain-deepseek @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_langchain-deepseek_1763056667/work
+langchain-ollama==1.0.1
+langchain-openai @ file:///home/conda/feedstock_root/build_artifacts/langchain-openai_1767842882033/work
+langchain-tavily==0.2.17
+langchain-text-splitters==1.1.0
+langgraph==1.0.6
+langgraph-checkpoint==4.0.0
+langgraph-prebuilt==1.0.6
+langgraph-sdk==0.3.3
+langsmith @ file:///home/conda/feedstock_root/build_artifacts/langsmith_1768676520780/work
+markdown-it-py==4.0.0
+MarkupSafe==3.0.3
+marshmallow==3.26.2
+matplotlib-inline==0.2.1
+mdurl==0.1.2
+mistune==3.2.0
+mmh3==5.2.0
+mpmath==1.3.0
+multidict @ file:///Users/runner/miniforge3/conda-bld/multidict_1765460453004/work
+mypy_extensions==1.1.0
+nbclient==0.10.4
+nbconvert==7.17.0
+nbformat==5.10.4
+numpy==2.4.1
+oauthlib==3.3.1
+ollama==0.6.1
+onnxruntime==1.23.2
+openai @ file:///home/conda/feedstock_root/build_artifacts/openai_1768062860380/work
+opentelemetry-api==1.39.1
+opentelemetry-exporter-otlp-proto-common==1.39.1
+opentelemetry-exporter-otlp-proto-grpc==1.39.1
+opentelemetry-proto==1.39.1
+opentelemetry-sdk==1.39.1
+opentelemetry-semantic-conventions==0.60b1
+orjson @ file:///Users/runner/miniforge3/conda-bld/bld/rattler-build_orjson_1765811472/work
+ormsgpack==1.12.1
+overrides==7.7.0
+packaging @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_packaging_1745345660/work
+pandocfilters==1.5.1
+parso==0.8.5
+pexpect==4.9.0
+pickleshare==0.7.5
+pipreqs==0.5.0
+platformdirs==4.5.1
+posthog==5.4.0
+prompt_toolkit==3.0.52
+propcache==0.4.1
+protobuf==6.33.5
+ptyprocess==0.7.0
+pure_eval==0.2.3
+pybase64==1.4.3
+pycparser @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_pycparser_1733195786/work
+pydantic @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_pydantic_1764434463/work
+pydantic-settings==2.12.0
+pydantic_core @ file:///Users/runner/miniforge3/conda-bld/bld/rattler-build_pydantic-core_1762989029/work
+pymongo==4.10.1
+PyDispatcher==2.0.7
+Pygments==2.19.2
+pypdf==6.6.2
+PyPika==0.51.0
+pyproject_hooks==1.2.0
+PySocks @ file:///home/conda/feedstock_root/build_artifacts/pysocks_1733217236728/work
+python-dateutil==2.9.0.post0
+python-dotenv==1.2.1
+python-multipart==0.0.24
+PyYAML @ file:///Users/runner/miniforge3/conda-bld/pyyaml_1758891734748/work
+pyzmq==27.1.0
+referencing==0.37.0
+regex @ file:///Users/runner/miniforge3/conda-bld/regex_1768558711560/work
+requests @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_requests_1766926974/work
+requests-oauthlib==2.0.0
+requests-toolbelt @ file:///home/conda/feedstock_root/build_artifacts/requests-toolbelt_1733734787568/work
+rich==14.3.2
+rpds-py==0.30.0
+setuptools==80.9.0
+shellingham==1.5.4
+six==1.17.0
+sniffio @ file:///home/conda/feedstock_root/build_artifacts/sniffio_1762941432086/work
+soupsieve @ file:///home/conda/feedstock_root/build_artifacts/soupsieve_1768776521218/work
+SQLAlchemy==2.0.45
+stack-data==0.6.3
+starlette==0.50.0
+structlog==25.5.0
+sympy==1.14.0
+tenacity @ file:///home/conda/feedstock_root/build_artifacts/tenacity_1743640740204/work
+tiktoken @ file:///Users/runner/miniforge3/conda-bld/tiktoken_1764028309190/work
+tinycss2==1.4.0
+tokenizers==0.22.2
+tornado==6.5.4
+tqdm @ file:///home/conda/feedstock_root/build_artifacts/tqdm_1735661334605/work
+traitlets==5.14.3
+Twisted==25.5.0
+typer==0.21.1
+typer-slim==0.21.1
+typing-inspect==0.9.0
+typing-inspection @ file:///home/conda/feedstock_root/build_artifacts/typing-inspection_1764158251755/work
+typing_extensions @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_typing_extensions_1756220668/work
+urllib3 @ file:///home/conda/feedstock_root/build_artifacts/urllib3_1767817748113/work
+uuid_utils @ file:///Users/runner/miniforge3/conda-bld/uuid-utils_1767910082039/work/target/wheels/uuid_utils-0.13.0-cp39-abi3-macosx_11_0_arm64.whl#sha256=428619463ca8a70cee6a32f601704c8b983d30f6d63b9c76298615a2f84b008b
+uvicorn==0.40.0
+uvloop==0.22.1
+watchfiles==1.1.1
+wcwidth==0.5.3
+webencodings==0.5.1
+websocket-client @ file:///home/conda/feedstock_root/build_artifacts/websocket-client_1759928050786/work
+websockets==16.0
+wheel==0.45.1
+xxhash==3.6.0
+yarg==0.1.9
+yarl @ file:///Users/runner/miniforge3/conda-bld/yarl_1761337051880/work
+zipp==3.23.0
+zope.interface==8.2
+zstandard==0.25.0
+
+# 混合检索依赖
+rank-bm25>=0.2.2
+jieba>=0.42.1
+
+# Reranker
+FlashRank>=0.2.0

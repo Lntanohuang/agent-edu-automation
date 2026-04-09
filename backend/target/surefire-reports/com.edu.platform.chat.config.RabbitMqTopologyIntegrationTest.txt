@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: com.edu.platform.chat.config.RabbitMqTopologyIntegrationTest
--------------------------------------------------------------------------------
-Tests run: 2, Failures: 0, Errors: 0, Skipped: 2, Time elapsed: 3.499 s -- in com.edu.platform.chat.config.RabbitMqTopologyIntegrationTest

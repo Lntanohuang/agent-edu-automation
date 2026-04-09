@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: com.edu.platform.chat.consumer.AiReplyPersistConsumerIntegrationTest
--------------------------------------------------------------------------------
-Tests run: 4, Failures: 0, Errors: 0, Skipped: 4, Time elapsed: 0.533 s -- in com.edu.platform.chat.consumer.AiReplyPersistConsumerIntegrationTest

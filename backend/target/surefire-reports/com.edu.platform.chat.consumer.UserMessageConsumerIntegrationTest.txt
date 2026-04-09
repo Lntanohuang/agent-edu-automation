@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: com.edu.platform.chat.consumer.UserMessageConsumerIntegrationTest
--------------------------------------------------------------------------------
-Tests run: 3, Failures: 0, Errors: 0, Skipped: 3, Time elapsed: 0.709 s -- in com.edu.platform.chat.consumer.UserMessageConsumerIntegrationTest

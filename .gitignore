@@ -1,0 +1,83 @@
+# ─────────────────────────────────────────────────────────────
+# Agent Edu Automation — 根 .gitignore
+# 覆盖 Python / Java / Node / IDE / 本项目产物
+# ─────────────────────────────────────────────────────────────
+
+# ── 敏感文件(务必保持在最前,优先级最高) ──
+.env
+.env.local
+.env.*.local
+# 允许提交示例 / 公开前端配置
+!.env.example
+!.env.development
+!.env.production
+
+# ── Python ──
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+.venv*/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+jieba.cache
+
+# ── Java / Maven ──
+target/
+*.class
+*.jar
+*.war
+.mvn/
+!.mvn/wrapper/maven-wrapper.jar
+
+# ── Node ──
+node_modules/
+dist/
+dist-ssr/
+*.local
+.npm/
+.pnpm-store/
+*.tsbuildinfo
+
+# ── IDE ──
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+*.swp
+*.swo
+*~
+
+# ── 操作系统 ──
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ── 本项目运行时产物 ──
+ai-service/chroma_db/
+ai-service/data/uploaded/
+ai-service/.logs/
+ai-service/logs/
+backend/logs/
+app.db
+*.db-journal
+
+# ── 日志 ──
+*.log
+logs/
+
+# ── 临时文件 ──
+*.tmp
+*.bak
+*.orig
