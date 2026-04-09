@@ -9,6 +9,7 @@ import com.edu.platform.chat.service.ChatEventPublisher;
 import com.edu.platform.common.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
@@ -17,6 +18,7 @@ import java.util.List;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@ConditionalOnProperty(prefix = "chat.mq", name = "enabled", havingValue = "true")
 public class UserMessageConsumer {
 
     private static final int HISTORY_LIMIT = 20;

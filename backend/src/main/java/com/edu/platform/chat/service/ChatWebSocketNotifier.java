@@ -2,6 +2,7 @@ package com.edu.platform.chat.service;
 
 import com.edu.platform.chat.event.AiReplyEvent;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
@@ -10,6 +11,7 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
+@ConditionalOnProperty(prefix = "chat.mq", name = "enabled", havingValue = "true")
 public class ChatWebSocketNotifier {
 
     private final SimpMessagingTemplate messagingTemplate;

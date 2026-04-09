@@ -76,6 +76,8 @@ ai:
     api-key: test-key
 
 chat:
+  mq:
+    enabled: true
   context:
     history-window: 10
     ttl-days: 1

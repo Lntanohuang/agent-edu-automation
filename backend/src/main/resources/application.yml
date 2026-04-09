@@ -55,20 +55,6 @@ spring:
     mongodb:
       uri: mongodb://localhost:27017/edu_platform
 
-  # RabbitMQ 配置
-  rabbitmq:
-    host: localhost
-    port: 5672
-    username: guest
-    password: guest
-    virtual-host: /
-    listener:
-      simple:
-        acknowledge-mode: auto
-        concurrency: 20
-        max-concurrency: 50
-        prefetch: 100
-
   # 文件上传配置
   servlet:
     multipart:
@@ -88,15 +74,17 @@ logging:
 ai:
   service:
     url: http://localhost:8000
-    timeout: 60000
+    timeout: 180000
     api-key: ${AI_API_KEY:}
 
 chat:
+  mq:
+    enabled: false
   context:
     history-window: 40
     ttl-days: 30
   reply:
-    timeout-ms: 60000
+    timeout-ms: 180000
 
 # JWT 配置
 jwt:

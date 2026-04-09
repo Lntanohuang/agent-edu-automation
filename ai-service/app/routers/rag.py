@@ -3,11 +3,13 @@ RAG 路由
 """
 import os
 import tempfile
+import time
+import uuid
 from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel, Field
-from fastapi import APIRouter, File, Form, UploadFile
+from fastapi import APIRouter, File, Form, Request, UploadFile
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
 
 from app.core.logging import get_logger
@@ -223,19 +225,41 @@ async def index_by_file(
 
 
 @router.post("/agent/chat", response_model=RagAgentChatResponse)
-async def rag_agent_chat(request: RagAgentChatRequest):
+async def rag_agent_chat(payload: RagAgentChatRequest, raw_request: Request):
     """
     基于 RAG + Skill Router 的对话
     """
+    trace_id = raw_request.headers.get("x-trace-id") or uuid.uuid4().hex[:16]
+    started_at = time.time()
+    logger.info(
+        "rag_agent_chat_received",
+        trace_id=trace_id,
+        conversation_id=payload.conversation_id,
+        history_count=len(payload.history),
+        max_history_tokens=payload.max_history_tokens,
+        query_chars=len(payload.query),
+    )
     try:
-        history_messages = [_to_langchain_message(item) for item in request.history]
-        langsmith_extra = {"project_name": request.trace_project_name} if request.trace_project_name else None
+        history_messages = [_to_langchain_message(item) for item in payload.history]
+        langsmith_extra = {"project_name": payload.trace_project_name} if payload.trace_project_name else None
         result = await rag_chat_service.chat(
-            query=request.query,
+            query=payload.query,
             history_messages=history_messages,
-            conversation_id=request.conversation_id,
-            max_history_tokens=request.max_history_tokens,
+            conversation_id=payload.conversation_id,
+            max_history_tokens=payload.max_history_tokens,
             langsmith_extra=langsmith_extra,
+            trace_id=trace_id,
+        )
+        logger.info(
+            "rag_agent_chat_succeeded",
+            trace_id=trace_id,
+            conversation_id=payload.conversation_id,
+            elapsed_ms=round((time.time() - started_at) * 1000, 1),
+            skill_used=result.get("skill_used"),
+            confidence=result.get("confidence"),
+            source_count=len(result.get("sources", [])),
+            exploration_task_count=len(result.get("exploration_tasks", [])),
+            book_label_count=len(result.get("book_labels", [])),
         )
         return RagAgentChatResponse(
             success=True,
@@ -250,7 +274,13 @@ async def rag_agent_chat(request: RagAgentChatRequest):
             error=None,
         )
     except Exception as exc:
-        logger.error("RAG agent chat failed", error=str(exc))
+        logger.error(
+            "rag_agent_chat_failed",
+            trace_id=trace_id,
+            conversation_id=payload.conversation_id,
+            elapsed_ms=round((time.time() - started_at) * 1000, 1),
+            error=str(exc),
+        )
         return RagAgentChatResponse(
             success=False,
             message=f"调用失败: {str(exc)}",
